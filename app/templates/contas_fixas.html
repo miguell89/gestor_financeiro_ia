@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% set page_title = "Contas fixas" %}
+
+{% block content %}
+<section class="fixed-bills-page">
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Contas Fixas</div>
+
+  <section class="welcome-row fixed-bills-hero">
+    <div>
+      <h2>Contas Fixas</h2>
+      <p>Acompanhe recorrencias, vencimentos e prioridades do mes.</p>
+    </div>
+    <button class="primary-button modal-open" type="button" data-modal-target="fixed-bill-modal">+ Nova Conta Fixa</button>
+  </section>
+
+  <section class="metrics-grid fixed-bill-kpis">
+    <article class="metric-card">
+      <div class="metric-icon icon-green">$</div>
+      <span>Total mensal fixo</span>
+      <strong data-bill-summary="total_mensal">{{ summary.total_mensal|brl }}</strong>
+      <small>recorrencias ativas</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-green">OK</div>
+      <span>Contas pagas</span>
+      <strong data-bill-summary="contas_pagas">{{ summary.contas_pagas }}</strong>
+      <small>sem pendencias</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-blue">P</div>
+      <span>Contas pendentes</span>
+      <strong data-bill-summary="contas_pendentes">{{ summary.contas_pendentes }}</strong>
+      <small>aguardando pagamento</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-red">!</div>
+      <span>Contas atrasadas</span>
+      <strong data-bill-summary="contas_atrasadas">{{ summary.contas_atrasadas }}</strong>
+      <small>acao necessaria</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-purple">A</div>
+      <span>Contas adiadas</span>
+      <strong data-bill-summary="contas_adiadas">{{ summary.contas_adiadas }}</strong>
+      <small>reprogramadas</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-teal">V</div>
+      <span>Proximo vencimento</span>
+      <strong data-bill-summary="proximo_vencimento">{{ summary.proximo_vencimento }}</strong>
+      <small data-bill-summary="proximo_valor">{{ summary.proximo_valor|brl }}</small>
+    </article>
+  </section>
+
+  <section class="fixed-bills-layout">
+    <article class="panel fixed-bills-main">
+      <form class="filters-bar fixed-bill-filters" method="get" data-fixed-bill-filters>
+        <label class="search-field">Buscar conta
+          <input name="search" placeholder="Internet, energia, escola...">
+        </label>
+        <label>Categoria
+          <select name="category_id">
+            <option value="">Todas categorias</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="">Todos status</option>
+            {% for status in statuses %}
+            <option value="{{ status }}">{{ status }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Vencimento
+          <select name="due">
+            <option value="">Todos</option>
+            <option value="hoje">Hoje</option>
+            <option value="7">Proximos 7 dias</option>
+            <option value="30">Proximos 30 dias</option>
+          </select>
+        </label>
+        <label>Recorrencia
+          <select name="recurrence">
+            <option value="">Todas</option>
+            {% for recurrence in recurrences %}
+            <option value="{{ recurrence }}">{{ recurrence }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button class="secondary-button" type="submit">Filtrar</button>
+        <button class="secondary-button btn-clear-bill-filters" type="button">Limpar filtros</button>
+      </form>
+
+      <div class="fixed-bills-groups" data-fixed-bills-list>
+        {% for key, label in [("atrasadas", "Atrasadas"), ("hoje", "Vencem hoje"), ("sete_dias", "Proximos 7 dias"), ("trinta_dias", "Proximos 30 dias"), ("adiadas", "Adiadas"), ("pagas", "Pagas")] %}
+        {% set group = bills|selectattr("priority_key", "equalto", key)|list %}
+        {% if group %}
+        <section class="bill-group" data-group="{{ key }}">
+          <h3>{{ label }}</h3>
+          <div class="bill-card-grid">
+            {% for bill in group %}
+            <article class="bill-card priority-{{ bill.priority_key }}" data-bill-id="{{ bill.id }}">
+              <div class="bill-card-head">
+                <div>
+                  <strong>{{ bill.name }}</strong>
+                  <span>{{ bill.category_name or "Sem categoria" }}</span>
+                </div>
+                <em class="status {{ bill.status }}">{{ bill.status }}</em>
+              </div>
+              <div class="bill-card-meta">
+                <span>Dia {{ bill.due_day }}</span>
+                <span>{{ bill.recurrence }}</span>
+                <span>Alerta {{ bill.alert_days_before }} dia(s)</span>
+                {% if bill.installment_label %}<span>Parcela {{ bill.installment_label }}</span>{% endif %}
+              </div>
+              <strong class="bill-amount">{{ bill.expected_amount|brl }}</strong>
+              <div class="bill-actions">
+                <button class="btn-bill-status" type="button" data-bill-id="{{ bill.id }}" data-status="pago">Pagar</button>
+                <button class="btn-bill-status" type="button" data-bill-id="{{ bill.id }}" data-status="adiado">Adiar</button>
+                <button class="btn-edit-bill" type="button" data-bill-id="{{ bill.id }}">Editar</button>
+                <button class="btn-bill-status" type="button" data-bill-id="{{ bill.id }}" data-status="cancelado">Cancelar</button>
+                <button class="btn-delete-bill" type="button" data-bill-id="{{ bill.id }}">Excluir</button>
+                <button type="button">Historico</button>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </article>
+
+    <aside class="panel fixed-bill-analysis">
+      <div class="panel-heading">
+        <h2>Analise por categoria</h2>
+      </div>
+      <div class="category-bars" data-bill-category-bars>
+        {% for item in summary.category_bars %}
+        <div class="category-bar">
+          <span><i></i>{{ item.name }}</span>
+          <div class="bar-track"><b style="width: {{ item.percent }}%;"></b></div>
+          <strong>{{ item.total|brl }}</strong>
+          <em>{{ item.percent }}%</em>
+        </div>
+        {% endfor %}
+      </div>
+    </aside>
+  </section>
+</section>
+
+<div class="modal-backdrop" id="fixed-bill-modal" hidden>
+  <aside class="slide-panel fixed-bill-slide-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title">
+        <span class="transaction-modal-icon">F</span>
+        <div>
+          <h2 data-bill-modal-title>Nova conta fixa</h2>
+          <p>Cadastre recorrencias, contas variaveis e compras parceladas por competencia.</p>
+        </div>
+      </div>
+      <button class="modal-close" type="button" data-modal-close>x</button>
+    </div>
+    <form class="fixed-bill-smart-form" method="post" data-fixed-bill-form>
+      <input type="hidden" name="id">
+      <div class="fixed-bill-form-grid">
+        <div class="fixed-bill-form-left">
+          <section class="smart-section">
+            <h3><span>1</span>Informacoes principais</h3>
+            <div class="smart-grid two">
+              <label>Nome da conta <input name="name" placeholder="Internet, energia, geladeira..." required></label>
+              <label>Categoria
+                <select name="category_id" required data-category-select data-category-kind="conta_fixa">{% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}<option value="__new__">+ Nova Categoria</option></select>
+              </label>
+              <label>Valor padrao <input type="number" step="0.01" min="0" name="default_amount" placeholder="99.90" required></label>
+              <label>Dia do vencimento <input type="number" min="1" max="31" name="due_day" placeholder="10" required></label>
+              <label>Forma de pagamento
+                <select name="payment_method" required>
+                  {% for method in payment_methods %}
+                  <option value="{{ method }}">{{ method }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Status
+                <select name="status">
+                  {% for status in bill_base_statuses %}
+                  <option value="{{ status }}">{{ status }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="wide-field">Observacao
+                <textarea name="notes" maxlength="220" placeholder="Ex: valor pode variar conforme consumo, contrato anual, cartao final 1234..."></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="smart-section">
+            <h3><span>2</span>Recorrencia e variacao</h3>
+            <div class="smart-grid three">
+              <label>Recorrencia
+                <select name="recurrence_interval">
+                  <option value="mensal">Mensal</option>
+                  <option value="quinzenal">Quinzenal</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="anual">Anual</option>
+                </select>
+              </label>
+              <label>Data de inicio <input type="date" name="start_date" value="{{ today }}"></label>
+              <label>Alerta antes <input type="number" min="0" max="30" name="alert_days_before" value="1"></label>
+            </div>
+            <div class="smart-card-grid">
+              <label class="check-card">
+                <input type="checkbox" name="ask_value_before_generate" value="1">
+                <span><strong>Perguntar valor antes de gerar</strong><small>Ideal para energia, agua, condominio e contas variaveis.</small></span>
+              </label>
+              <label class="check-card">
+                <input type="checkbox" name="auto_update_default_value" value="1">
+                <span><strong>Atualizar valor padrao automaticamente</strong><small>Quando o valor mudar, perguntar se vira o novo padrao.</small></span>
+              </label>
+              <label class="check-card upload-card">
+                <input type="file" name="receipt_file" accept=".pdf,image/*" data-bill-receipt-input>
+                <span><strong>Anexar comprovante do mes</strong><small data-bill-receipt-file-name>Boleto pago, Pix ou debito automatico</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="smart-section installment-section">
+            <h3><span>3</span>Parcelamento opcional</h3>
+            <label class="switch-row">
+              <input type="checkbox" name="is_installment" value="1" data-installment-toggle>
+              <span><strong>Esta conta e parcelada?</strong><small>Use para compras divididas em parcelas mensais.</small></span>
+              <i></i>
+            </label>
+            <div class="installment-options" data-installment-options hidden>
+              <div class="smart-grid three">
+                <label>Numero de parcelas <input type="number" min="1" name="total_installments" placeholder="12"></label>
+                <label>Valor da parcela <input type="number" step="0.01" min="0" name="installment_amount" placeholder="125.00"></label>
+                <label>Parcelas ja pagas <input type="number" min="0" name="paid_installments" value="0"></label>
+                <label>Inicio do parcelamento <input type="date" name="installment_start_date" value="{{ today }}"></label>
+                <label>Total do parcelamento <input type="number" step="0.01" min="0" name="installment_total_amount" placeholder="1500.00"></label>
+              </div>
+              <div class="info-strip">O sistema gera uma ocorrencia por mes ate a ultima parcela, sem duplicar o cadastro principal.</div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="fixed-bill-form-right">
+          <section class="smart-section fixed-bill-preview-section">
+            <h3><span>R</span>Resumo da conta fixa</h3>
+            <article class="fixed-bill-preview-card">
+              <div class="preview-top">
+                <span class="preview-avatar">F</span>
+                <div><strong data-bill-preview-name>Nova conta</strong><em data-bill-preview-status>Ativa</em></div>
+                <p><small>Valor padrao</small><b data-bill-preview-amount>R$ 0,00</b></p>
+              </div>
+              <dl>
+                <div><dt>Categoria</dt><dd data-bill-preview-category>Sem categoria</dd></div>
+                <div><dt>Vencimento</dt><dd data-bill-preview-due>Dia --</dd></div>
+                <div><dt>Recorrencia</dt><dd data-bill-preview-recurrence>Mensal</dd></div>
+                <div><dt>Perguntar valor</dt><dd data-bill-preview-ask>Nao</dd></div>
+                <div><dt>Atualizar padrao</dt><dd data-bill-preview-update>Nao</dd></div>
+                <div><dt>Pagamento</dt><dd data-bill-preview-payment>Boleto</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="smart-section fixed-bill-next-card">
+            <h3>Proxima geracao</h3>
+            <p>Em <b data-bill-preview-next-date>-</b> sera criada:</p>
+            <div class="next-preview-row">
+              <strong data-bill-preview-next-name>Nova conta</strong>
+              <span data-bill-preview-next-status>Pendente</span>
+              <b data-bill-preview-next-amount>R$ 0,00</b>
+            </div>
+            <small data-bill-preview-installment>Conta recorrente simples.</small>
+          </section>
+
+          <section class="smart-section fixed-bill-alerts-card">
+            <h3>Dicas e alertas</h3>
+            <ul class="smart-list">
+              <li data-bill-tip-alert>Voce sera notificado antes do vencimento.</li>
+              <li data-bill-tip-variable>Para contas variaveis, ative a confirmacao mensal de valor.</li>
+              <li data-bill-tip-installment>Parcelas serao geradas automaticamente mes a mes.</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+
+      <div class="transaction-modal-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button transaction-save-button" type="submit">Salvar conta fixa</button>
+      </div>
+    </form>
+  </aside>
+</div>
+{% endblock %}

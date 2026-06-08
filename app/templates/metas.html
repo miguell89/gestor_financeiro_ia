@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% set page_title = "Metas" %}
+
+{% block content %}
+<section class="goals-page" data-goals-page>
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Metas</div>
+
+  <section class="welcome-row goals-hero">
+    <div>
+      <h2>Metas financeiras</h2>
+      <p>Planeje, acompanhe e acelere seus objetivos financeiros.</p>
+    </div>
+    <button class="primary-button" type="button" data-goal-new>+ Nova Meta</button>
+  </section>
+
+  <section class="metrics-grid goals-kpis">
+    <article class="metric-card"><div class="metric-icon icon-purple">M</div><span>Total de metas</span><strong data-goal-summary="total_goals">{{ data.summary.total_goals }}</strong><small>{{ data.summary.completed_goals }} concluidas</small></article>
+    <article class="metric-card"><div class="metric-icon icon-blue">O</div><span>Valor total dos objetivos</span><strong data-goal-summary="total_target">{{ data.summary.total_target|brl }}</strong><small>objetivo consolidado</small></article>
+    <article class="metric-card"><div class="metric-icon icon-green">A</div><span>Total acumulado</span><strong data-goal-summary="total_current">{{ data.summary.total_current|brl }}</strong><small>{{ data.summary.average_percent }}% do total</small></article>
+    <article class="metric-card"><div class="metric-icon icon-teal">E</div><span>Economia media mensal</span><strong data-goal-summary="avg_monthly">{{ data.summary.avg_monthly|brl }}</strong><small>ritmo atual</small></article>
+    <article class="metric-card"><div class="metric-icon icon-red">P</div><span>Previsao de conclusao</span><strong data-goal-summary="completion_forecast">{{ data.summary.completion_forecast }}</strong><small>{{ data.summary.late_goals }} atrasada(s)</small></article>
+  </section>
+
+  <section class="goals-insights-grid">
+    <article class="panel goals-distribution-panel">
+      <div class="panel-heading"><h2>Distribuicao das metas</h2></div>
+      <div class="goals-donut-layout">
+        <div class="goals-donut" data-goals-donut>
+          <strong>{{ data.summary.average_percent }}%</strong>
+          <span>media</span>
+        </div>
+        <div class="goal-distribution-list">
+          {% for item in data.distribution[:6] %}
+          <div class="category-bar">
+            <span><i style="background: {{ item.color }}"></i>{{ item.name }}</span>
+            <div class="bar-track"><b style="width: {{ item.percent }}%; background: {{ item.color }}"></b></div>
+            <strong>{{ item.total|brl }}</strong>
+            <em>{{ item.percent }}%</em>
+          </div>
+          {% else %}
+          <p class="muted-text">Crie sua primeira meta para ver a distribuicao.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </article>
+
+    <article class="panel goals-projection-panel">
+      <div class="panel-heading"><h2>Projecao de conclusao</h2></div>
+      <div class="projection-card">
+        <span>Objetivo total</span><strong>{{ data.summary.total_target|brl }}</strong>
+        <span>Projecao atual</span><strong>{{ data.summary.total_current|brl }}</strong>
+        <span>Prazo estimado</span><strong>{{ data.summary.completion_forecast }}</strong>
+        <div class="progress-line"><i style="width: {{ data.summary.average_percent }}%;"></i></div>
+      </div>
+    </article>
+
+    <article class="panel goals-ai-panel">
+      <div class="panel-heading"><h2>Sugestoes inteligentes</h2><span class="mini-badge">IA</span></div>
+      <ul class="goal-suggestions">
+        {% for suggestion in data.suggestions %}
+        <li>{{ suggestion }}</li>
+        {% endfor %}
+      </ul>
+    </article>
+  </section>
+
+  <section class="panel goals-list-panel">
+    <div class="panel-heading">
+      <h2>Minhas metas</h2>
+      <button class="panel-link-inline" type="button" data-goal-new>Nova Meta</button>
+    </div>
+    <div class="goals-card-grid" data-goals-list>
+      {% for goal in data.goals %}
+      <article class="goal-item-card status-{{ goal.status }}" data-goal-id="{{ goal.id }}">
+        <div class="goal-item-head">
+          <span class="goal-icon" style="background: {{ goal.color }}">{{ goal.icon }}</span>
+          <div>
+            <strong>{{ goal.name }}</strong>
+            <small>{{ goal.description or goal.type }}</small>
+          </div>
+          <em class="status {{ 'pago' if goal.status == 'concluida' else 'atrasado' if goal.status == 'atrasada' else 'pendente' if goal.status == 'pausada' else 'pago' }}">{{ goal.status_label }}</em>
+        </div>
+        <div class="goal-money-row">
+          <div><span>Atual</span><strong>{{ goal.current_calculated|brl }}</strong></div>
+          <div><span>Objetivo</span><strong>{{ goal.target_amount|brl }}</strong></div>
+          <div><span>Falta</span><strong>{{ goal.missing_amount|brl }}</strong></div>
+        </div>
+        <div class="goal-progress-line">
+          <div class="progress-line"><i style="width: {{ goal.percent }}%; background: {{ goal.color }}"></i></div>
+          <b>{{ goal.percent }}%</b>
+        </div>
+        <dl class="goal-meta-list">
+          <div><dt>Prazo</dt><dd>{{ goal.deadline_date or "-" }}</dd></div>
+          <div><dt>Previsao</dt><dd>{{ goal.estimated_completion_label }}</dd></div>
+          <div><dt>Necessario/mes</dt><dd>{{ goal.required_monthly|brl }}</dd></div>
+          <div><dt>Planejado x realizado</dt><dd>{{ goal.planned_vs_realized|brl }}</dd></div>
+        </dl>
+        <div class="goal-actions">
+          <button type="button" data-goal-edit='{{ goal|tojson }}'>Editar</button>
+          <button type="button" data-goal-contribute="{{ goal.id }}">Adicionar valor</button>
+          <button type="button" data-goal-history="{{ goal.id }}">Historico</button>
+          <button type="button" data-goal-status="{{ goal.id }}" data-status="pausada">Pausar</button>
+          <button type="button" data-goal-status="{{ goal.id }}" data-status="concluida">Concluir</button>
+          <button type="button" data-goal-delete="{{ goal.id }}">Excluir</button>
+        </div>
+      </article>
+      {% else %}
+      <article class="panel empty-module"><h2>Nenhuma meta cadastrada</h2><p>Crie uma meta para comecar seu planejamento financeiro.</p></article>
+      {% endfor %}
+    </div>
+  </section>
+</section>
+
+<div class="modal-backdrop" id="goal-modal" hidden>
+  <aside class="slide-panel goal-slide-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title">
+        <span class="transaction-modal-icon">G</span>
+        <div><h2 data-goal-modal-title>Nova Meta</h2><p>Configure objetivo, ritmo mensal e prazo final.</p></div>
+      </div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+    <form class="goal-form goal-smart-form" data-goal-form>
+      <input type="hidden" name="id">
+      <input type="hidden" name="type" value="Reserva de emergencia">
+      <input type="hidden" name="status" value="no_ritmo">
+      <div class="goal-form-grid">
+        <div class="goal-form-left">
+          <section class="smart-section">
+            <h3><span>1</span>Objetivo</h3>
+            <div class="smart-grid two">
+              <label class="wide">Nome da meta <b>*</b><input name="name" required maxlength="90" placeholder="Entrada do apartamento"></label>
+              <label class="wide">Descricao <textarea name="description" maxlength="220" placeholder="Por que essa meta importa?"></textarea></label>
+            </div>
+          </section>
+
+          <section class="smart-section">
+            <h3><span>2</span>Tipo da meta</h3>
+            <div class="goal-type-grid">
+              {% for type in data.types %}
+              <button class="goal-type-card {{ 'active' if loop.first else '' }}" type="button" data-goal-type="{{ type }}">
+                <b>{{ type[:1] }}</b>
+                <span>{{ type }}</span>
+              </button>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="smart-section">
+            <h3><span>3</span>Valores e prazo</h3>
+            <div class="smart-grid two">
+              <label>Valor objetivo <b>*</b><input type="number" step="0.01" min="0" name="target_amount" required placeholder="20000"></label>
+              <label>Valor inicial <input type="number" step="0.01" min="0" name="current_amount" value="0"></label>
+              <label>Valor mensal planejado <input type="number" step="0.01" min="0" name="monthly_target_amount" value="0"></label>
+              <label>Data de inicio <input type="date" name="start_date" value="{{ today }}"></label>
+              <label>Prazo final <input type="date" name="deadline_date"></label>
+              <label>Cor <input type="color" name="color" value="#8b5cf6"></label>
+              <label>Icone <input name="icon" maxlength="3" placeholder="A"></label>
+            </div>
+          </section>
+
+          <section class="smart-section">
+            <h3><span>4</span>Direcionamento automatico</h3>
+            <label class="switch-row">
+              <input type="checkbox" name="auto_revenue_enabled" value="1" data-goal-auto-revenue>
+              <span><strong>Separar parte das receitas para esta meta</strong><small>Use como lembrete no cadastro de novas receitas.</small></span>
+              <i></i>
+            </label>
+            <div class="smart-grid two goal-auto-revenue-options" data-goal-auto-revenue-options hidden>
+              <label>Percentual sugerido <input type="number" min="0" max="100" step="1" name="auto_revenue_percent" value="10"></label>
+              <label>Valor minimo mensal <input type="number" min="0" step="0.01" name="auto_revenue_minimum" value="0"></label>
+            </div>
+          </section>
+        </div>
+
+        <aside class="goal-form-right">
+          <section class="smart-section goal-preview-section">
+            <h3><span>R</span>Resumo da meta</h3>
+            <article class="goal-live-preview" data-goal-live-preview>
+              <div class="preview-top">
+                <span class="preview-avatar" data-goal-preview-icon>G</span>
+                <div><strong data-goal-preview-name>Nova meta</strong><em data-goal-preview-type>Reserva de emergencia</em></div>
+                <p><small>Status</small><b data-goal-preview-status>No ritmo</b></p>
+              </div>
+              <div class="goal-preview-progress">
+                <div class="progress-line"><i data-goal-preview-progress style="width: 0%;"></i></div>
+                <b data-goal-preview-percent>0%</b>
+              </div>
+              <dl>
+                <div><dt>Atual</dt><dd data-goal-preview-current>R$ 0,00</dd></div>
+                <div><dt>Objetivo</dt><dd data-goal-preview-target>R$ 0,00</dd></div>
+                <div><dt>Falta</dt><dd data-goal-preview-missing>R$ 0,00</dd></div>
+                <div><dt>Necessario por mes</dt><dd data-goal-preview-required>R$ 0,00</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="smart-section goal-simulator-section">
+            <h3><span>S</span>Simulador financeiro</h3>
+            <label>Aumentar economia mensal em <input type="range" min="0" max="1000" step="50" value="0" data-goal-simulator-extra></label>
+            <div class="goal-simulator-grid">
+              <div><span>Economia mensal</span><strong data-goal-simulator-monthly>R$ 0,00</strong></div>
+              <div><span>Previsao atual</span><strong data-goal-preview-forecast>-</strong></div>
+              <div><span>Com reforco</span><strong data-goal-simulator-forecast>-</strong></div>
+              <div><span>Diferenca</span><strong data-goal-simulator-delta>0 mes(es)</strong></div>
+            </div>
+          </section>
+
+          <section class="smart-section goal-motivation-card">
+            <h3><span>AI</span>Leitura inteligente</h3>
+            <p data-goal-preview-tip>Preencha objetivo, valor e prazo para ver uma simulacao da sua meta.</p>
+          </section>
+        </aside>
+      </div>
+      <div class="transaction-modal-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button" type="submit">Salvar meta</button>
+      </div>
+      <p class="form-feedback" data-goal-feedback></p>
+    </form>
+  </aside>
+</div>
+
+<div class="modal-backdrop" id="goal-contribution-modal" hidden>
+  <aside class="quick-category-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title"><span class="transaction-modal-icon">+</span><div><h2>Adicionar valor</h2><p>Registre uma contribuicao para a meta.</p></div></div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+    <form class="quick-category-form" data-goal-contribution-form>
+      <input type="hidden" name="goal_id">
+      <label>Valor <b>*</b><input type="number" step="0.01" min="0" name="amount" required></label>
+      <label>Data <input type="date" name="contribution_date" value="{{ today }}"></label>
+      <label>Origem <select name="source">{% for source in data.sources %}<option value="{{ source }}">{{ source }}</option>{% endfor %}</select></label>
+      <label>Observacao <input name="notes" placeholder="Ex.: parte do salario"></label>
+      <div class="category-form-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button" type="submit">Salvar contribuicao</button>
+      </div>
+      <p class="form-feedback" data-goal-contribution-feedback></p>
+    </form>
+  </aside>
+</div>
+
+<div class="modal-backdrop" id="goal-history-modal" hidden>
+  <aside class="slide-panel goal-history-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title"><span class="transaction-modal-icon">H</span><div><h2>Historico de contribuicoes</h2><p>Entradas registradas para esta meta.</p></div></div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+    <div class="table-wrap">
+      <table class="transactions-table">
+        <thead><tr><th>Data</th><th>Valor</th><th>Origem</th><th>Observacao</th></tr></thead>
+        <tbody data-goal-history-body></tbody>
+      </table>
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set page_title = "Telegram" %}
+
+{% block content %}
+<section class="settings-page telegram-settings-page">
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Configuracoes <span>&gt;</span> Telegram</div>
+
+  <section class="welcome-row settings-hero">
+    <div>
+      <h2>Telegram</h2>
+      <p>Vincule sua conta do Telegram ao bot financeiro com um codigo temporario.</p>
+    </div>
+    <a class="secondary-button" href="{{ period_url('web.configuracoes') }}">Voltar</a>
+  </section>
+
+  {% if message %}
+  <div class="form-feedback success">{{ message }}</div>
+  {% endif %}
+  {% if error %}
+  <div class="form-feedback error">{{ error }}</div>
+  {% endif %}
+
+  <section class="dashboard-grid telegram-config-grid">
+    <article class="panel">
+      <div class="panel-heading">
+        <h2>Status da vinculacao</h2>
+      </div>
+      {% set user = telegram_status.user %}
+      {% if user and user.telegram_id %}
+      <div class="telegram-status-card linked">
+        <span>Vinculado</span>
+        <strong>{{ user.telegram_first_name or user.telegram_username or "Telegram" }}</strong>
+        <small>ID: {{ user.telegram_id }}</small>
+        {% if user.telegram_username %}
+        <small>@{{ user.telegram_username }}</small>
+        {% endif %}
+        <small>Ultima interacao: {{ user.last_interaction_at or "-" }}</small>
+      </div>
+      <form method="post" class="inline-action-form">
+        <input type="hidden" name="action" value="unlink">
+        <button class="secondary-button danger-button" type="submit">Desvincular Telegram</button>
+      </form>
+      {% else %}
+      <div class="telegram-status-card">
+        <span>Nao vinculado</span>
+        <strong>Conecte sua conta ao bot</strong>
+        <small>Depois da vinculacao, todos os comandos do Telegram usam somente seus dados.</small>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="panel">
+      <div class="panel-heading">
+        <h2>Codigo de vinculacao</h2>
+      </div>
+      {% if telegram_status.active_code %}
+      <div class="telegram-code-box">
+        <span>Codigo ativo</span>
+        <strong>{{ telegram_status.active_code.code }}</strong>
+        <small>Expira em {{ telegram_status.active_code.expires_at }}</small>
+      </div>
+      {% else %}
+      <div class="telegram-code-box muted">
+        <span>Nenhum codigo ativo</span>
+        <strong>MGF-000000</strong>
+        <small>Codigos expiram em {{ telegram_status.ttl_minutes }} minutos.</small>
+      </div>
+      {% endif %}
+      <form method="post" class="inline-action-form">
+        <input type="hidden" name="action" value="generate">
+        <button class="primary-button" type="submit">Gerar codigo de vinculacao</button>
+      </form>
+      <div class="telegram-instructions">
+        <span>Como usar</span>
+        <code>/vincular CODIGO</code>
+        <small>Exemplo: /vincular MGF-482913</small>
+      </div>
+    </article>
+  </section>
+</section>
+{% endblock %}

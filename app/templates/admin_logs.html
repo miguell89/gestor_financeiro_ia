@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set page_title = "Logs do sistema" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Logs</h2>
+    <a href="{{ url_for('web.admin_users') }}">Usuarios</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Nivel</th><th>Origem</th><th>Usuario</th><th>Telegram ID</th><th>Acao</th><th>Mensagem</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.created_at }}</td>
+          <td>{{ log.level }}</td>
+          <td>{{ log.source }}</td>
+          <td>{{ log.user_name or "-" }}</td>
+          <td>{{ log.telegram_id or "-" }}</td>
+          <td>{{ log.action }}</td>
+          <td>{{ log.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

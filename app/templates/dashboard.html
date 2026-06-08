@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% set page_title = "Dashboard" %}
+
+{% block content %}
+<section class="dashboard-shell">
+  <div class="welcome-row dashboard-hero">
+    <div>
+      <h2>Ola, {{ session.user.name if session.user else "Miguel" }}! <span>&#128075;</span></h2>
+      <p>Aqui esta o resumo da sua vida financeira.</p>
+    </div>
+    <button class="primary-button refresh-dashboard" type="button">Atualizar Dashboard</button>
+  </div>
+
+  <section class="metrics-grid executive-kpis">
+    <article class="metric-card glow-green">
+      <div class="metric-icon icon-green">$</div>
+      <span>Saldo disponivel</span>
+      <strong>{{ data.saldo_atual|brl }}</strong>
+      <small>em todas as contas</small>
+    </article>
+    <article class="metric-card">
+      <div class="metric-icon icon-blue">R</div>
+      <span>Receitas do mes</span>
+      <strong>{{ data.receitas|brl }}</strong>
+      <small><b class="trend up">↑ {{ data.receitas_delta }}%</b> vs mes anterior</small>
+    </article>
+    <article class="metric-card glow-purple">
+      <div class="metric-icon icon-red">D</div>
+      <span>Despesas do mes</span>
+      <strong>{{ data.despesas|brl }}</strong>
+      <small><b class="trend down">↓ {{ data.despesas_delta|abs }}%</b> vs mes anterior</small>
+    </article>
+    <article class="metric-card glow-blue">
+      <div class="metric-icon icon-purple">S</div>
+      <span>Saldo previsto</span>
+      <strong>{{ data.saldo_previsto|brl }}</strong>
+      <small>ate o final do mes</small>
+    </article>
+    <article class="metric-card glow-green">
+      <div class="metric-icon icon-teal">E</div>
+      <span>Economia do mes</span>
+      <strong>{{ data.economia_mes|brl }}</strong>
+      <small>{{ ((data.economia_mes / data.receitas) * 100)|round|int if data.receitas else 0 }}% das receitas</small>
+    </article>
+  </section>
+
+  <section class="overview-grid">
+    <article class="panel health-card">
+      <div class="panel-heading">
+        <h2>Saude Financeira</h2>
+      </div>
+      <div class="health-layout">
+        <div class="score-ring" style="--score: {{ data.health_score }}%;">
+          <strong>{{ data.health_score }}%</strong>
+        </div>
+        <div class="health-list">
+          <span><i class="dot ok"></i>Contas pagas: {{ data.paid_percent }}%</span>
+          <span><i class="dot ok"></i>Orcamento controlado</span>
+          <span><i class="dot warn"></i>{{ data.near_limit_count }} categoria(s) proxima(s) do limite</span>
+          <span><i class="dot danger"></i>{{ data.over_limit_count }} categoria(s) acima da media</span>
+          <strong class="health-status {{ data.health_status|lower }}">Situacao: {{ data.health_status }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel compact-bills-card">
+      <div class="compact-bills">
+        <div>
+          <span class="summary-icon ok">OK</span>
+          <strong>{{ data.contas_pagas }}</strong>
+          <small>Contas pagas<br>este mes</small>
+        </div>
+        <div>
+          <span class="summary-icon wait">P</span>
+          <strong>{{ data.contas_pendentes }}</strong>
+          <small>Conta pendente<br>este mes</small>
+        </div>
+        <div>
+          <span class="summary-icon late">!</span>
+          <strong>{{ data.contas_atrasadas }}</strong>
+          <small>Conta atrasada<br>atencao necessaria</small>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel goal-card">
+      <div class="panel-heading">
+        <h2>Meta de Economia</h2>
+        <a href="/metas?month={{ selected_period.month }}&year={{ selected_period.year }}">Editar</a>
+      </div>
+      <strong>{{ data.goal_current|brl }} / {{ data.goal_target|brl }}</strong>
+      <div class="progress-line">
+        <i style="width: {{ data.goal_percent }}%;"></i>
+      </div>
+      <div class="goal-footer">
+        <span>Faltam {{ data.goal_missing|brl }} para sua meta</span>
+        <b>{{ data.goal_percent }}%</b>
+      </div>
+    </article>
+  </section>
+
+  <section class="insight-grid">
+    <article class="panel category-panel">
+      <div class="panel-heading">
+        <h2>Gastos por categoria</h2>
+        <button class="period-small">Este mes</button>
+      </div>
+      <div class="category-bars">
+        {% for item in data.category_bars %}
+        <div class="category-bar">
+          <span><i></i>{{ item.name }}</span>
+          <div class="bar-track"><b style="width: {{ item.percent }}%;"></b></div>
+          <strong>{{ item.total|brl }}</strong>
+          <em>{{ item.percent }}%</em>
+        </div>
+        {% endfor %}
+      </div>
+      <a class="panel-link" href="{{ period_url('web.configuracoes_categorias') }}">Ver todas as categorias</a>
+    </article>
+
+    <article class="panel comparison-card">
+      <div class="panel-heading">
+        <h2>Comparativo com mes anterior</h2>
+        <button class="period-small">Maio vs Abril</button>
+      </div>
+      <div class="comparison-grid">
+        <div>
+          <span>Receitas</span>
+          <strong class="trend up">↑ {{ data.receitas_delta }}%</strong>
+          <div class="mini-chart positive"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div>
+          <span>Despesas</span>
+          <strong class="trend down">↓ {{ data.despesas_delta|abs }}%</strong>
+          <div class="mini-chart negative"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <p class="success-note">Voce esta indo melhor que no mes anterior. Continue assim.</p>
+    </article>
+
+    <article class="panel due-panel">
+      <div class="panel-heading">
+        <h2>Proximos vencimentos</h2>
+        <a href="{{ url_for('web.contas_fixas') }}">Ver todas</a>
+      </div>
+      <div class="list priority-list">
+        {% for bill in data.fixed_bills %}
+        <div class="list-item priority-{{ bill.priority_class }}">
+          <div class="bill-icon">{{ bill.name[:1] }}</div>
+          <div>
+            <small>{{ bill.priority }}</small>
+            <strong>{{ bill.name }}</strong>
+            <span>{{ bill.category_name or "Sem categoria" }}</span>
+          </div>
+          <em class="status {{ bill.status }}">{{ bill.status }}</em>
+          <b>{{ bill.expected_amount|brl }}</b>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="bottom-grid">
+    <article class="panel transactions-panel">
+      <div class="panel-heading">
+        <h2>Ultimos lancamentos</h2>
+        <a href="{{ url_for('web.lancamentos') }}">Ver todos</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Data</th>
+              <th>Descricao</th>
+              <th>Categoria</th>
+              <th>Origem</th>
+              <th>Valor</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in data.latest_transactions %}
+            <tr>
+              <td><span class="row-icon">{{ (item.category_name or item.description or "?")[:1] }}</span></td>
+              <td>{{ item.date }}</td>
+              <td>{{ item.description }}</td>
+              <td>{{ item.category_name or "-" }}</td>
+              <td>{{ item.origin }}</td>
+              <td class="{{ item.type }}">{{ item.amount|brl }}</td>
+              <td><em class="status {{ item.status }}">{{ item.status }}</em></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="panel alerts-card">
+      <div class="panel-heading">
+        <h2>Alertas</h2>
+      </div>
+      <div class="alerts-list">
+        {% for alert in data.alerts %}
+        <div class="alert-item {{ alert.type }}">
+          <span>!</span>
+          <div>
+            <strong>{{ alert.title }}</strong>
+            <small>{{ alert.message }}</small>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="panel ai-card assistant-decision-card">
+      <div class="assistant-wrap">
+        <div class="assistant-avatar"><span></span></div>
+        <div>
+          <h2>Assistente Financeiro IA</h2>
+          <div class="assistant-bubble">
+            <strong>Miguel, atencao:</strong>
+            <ul>
+              <li>{{ data.top_category.name }} consumiu {{ data.top_category.percent }}% do orcamento.</li>
+              <li>Existe {{ data.contas_atrasadas }} conta atrasada.</li>
+              <li>Seu saldo previsto e {{ "positivo" if data.saldo_previsto >= 0 else "negativo" }}.</li>
+            </ul>
+            <strong>Recomendacao:</strong>
+            <p>Evite novas despesas em lazer esta semana.</p>
+          </div>
+        </div>
+      </div>
+      <div class="assistant-actions">
+        <a class="primary-button" href="{{ url_for('web.assistente') }}">Perguntar</a>
+        <a class="secondary-button" href="{{ period_url('web.relatorios') }}">Ver analise completa</a>
+      </div>
+    </article>
+  </section>
+</section>
+{% endblock %}

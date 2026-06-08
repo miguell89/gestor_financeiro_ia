@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% set page_title = "Relatorios" %}
+
+{% block content %}
+<section class="reports-page" data-reports-page>
+  <div class="reports-actions">
+    <a class="secondary-button" href="{{ period_url('web.relatorios_export_pdf') }}">Exportar PDF</a>
+    <a class="secondary-button" href="{{ period_url('web.relatorios_export_csv') }}">Exportar CSV</a>
+    <a class="secondary-button" href="{{ period_url('web.relatorios_export_xlsx') }}">Exportar Excel</a>
+  </div>
+
+  {% if not data.has_data %}
+  <article class="panel report-empty">
+    <h2>Nao encontrei movimentacoes para esse mes ainda.</h2>
+    <p>Cadastre receitas, lancamentos ou contas fixas para gerar analises financeiras desta competencia.</p>
+  </article>
+  {% endif %}
+
+  <section class="metrics-grid report-kpis">
+    {% for card in data.cards %}
+    <article class="metric-card report-kpi-card report-{{ card.icon }}">
+      <div class="metric-icon icon-{{ 'green' if card.delta >= 0 else 'red' }}">{{ card.title[:1] }}</div>
+      <span>{{ card.title }}</span>
+      <strong data-report-card="{{ card.key }}">{{ card.value }}</strong>
+      <small>
+        <b class="trend {{ 'up' if card.delta >= 0 else 'down' }}">{{ '+' if card.delta >= 0 else '-' }} {{ card.delta|abs }}%</b>
+        {{ card.delta_label }}
+      </small>
+    </article>
+    {% endfor %}
+  </section>
+
+  <section class="reports-main-grid">
+    <article class="panel report-evolution-panel">
+      <div class="panel-heading">
+        <h2>Evolucao mensal</h2>
+        <select class="report-range-select" data-report-range>
+          <option value="3">Ultimos 3 meses</option>
+          <option value="6">Ultimos 6 meses</option>
+          <option value="12" selected>Ultimos 12 meses</option>
+          <option value="year">Ano atual</option>
+        </select>
+      </div>
+      <div class="report-chart-wrap">
+        <canvas id="report-evolution-chart" width="1100" height="360" aria-label="Grafico de evolucao mensal"></canvas>
+      </div>
+      <div class="chart-legend">
+        <span><i class="legend-green"></i>Receitas</span>
+        <span><i class="legend-red"></i>Despesas</span>
+        <span><i class="legend-blue"></i>Saldo</span>
+      </div>
+    </article>
+
+    <article class="panel report-ai-card">
+      <div class="panel-heading">
+        <h2>Resumo Inteligente IA</h2>
+        <span class="mini-badge">Novo</span>
+      </div>
+      <p>Analise automatica gerada com base nos seus dados de {{ data.label }}.</p>
+      <ul data-report-ai>
+        {% for item in data.ai_summary %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+      <a class="panel-link" href="{{ period_url('web.assistente') }}">Ver analise completa</a>
+    </article>
+  </section>
+
+  <section class="reports-secondary-grid">
+    <article class="panel report-category-panel">
+      <div class="panel-heading"><h2>Gastos por categoria</h2></div>
+      <div class="category-donut-layout">
+        <div class="category-donut" style="--a: {{ data.categories[0].percent if data.categories|length > 0 else 0 }}%; --b: {{ data.categories[1].percent if data.categories|length > 1 else 0 }}%; --c: {{ data.categories[2].percent if data.categories|length > 2 else 0 }}%;">
+          <strong>{{ data.summary.despesas|brl }}</strong>
+          <span>Total</span>
+        </div>
+        <div class="report-category-list" data-report-categories>
+          {% for item in data.categories[:6] %}
+          <div class="category-bar">
+            <span><i style="background: {{ item.color }}"></i>{{ item.name }}</span>
+            <div class="bar-track"><b style="width: {{ item.percent }}%; background: {{ item.color }}"></b></div>
+            <strong>{{ item.total|brl }}</strong>
+            <em>{{ item.percent }}%</em>
+          </div>
+          {% else %}
+          <p class="muted-text">Nenhuma despesa categorizada.</p>
+          {% endfor %}
+        </div>
+      </div>
+      <a class="panel-link" href="{{ period_url('web.configuracoes_categorias') }}">Ver todas as categorias</a>
+    </article>
+
+    <article class="panel report-goals-panel">
+      <div class="panel-heading">
+        <h2>Metas financeiras</h2>
+        <a href="/metas?month={{ selected_period.month }}&year={{ selected_period.year }}">Ver todas</a>
+      </div>
+      <div class="report-goal-list" data-report-goals>
+        {% for goal in data.goals %}
+        <div class="report-goal-item">
+          <div>
+            <strong>{{ goal.name }}</strong>
+            <span>{{ goal.current|brl }} / {{ goal.target|brl }}</span>
+          </div>
+          <b>{{ goal.percent }}%</b>
+          <div class="progress-line"><i style="width: {{ goal.percent }}%;"></i></div>
+        </div>
+        {% endfor %}
+      </div>
+      <a class="panel-link" href="/metas?month={{ selected_period.month }}&year={{ selected_period.year }}">Gerenciar metas</a>
+    </article>
+
+    <article class="panel report-alerts-panel">
+      <div class="panel-heading">
+        <h2>Alertas e oportunidades</h2>
+        <a href="/alertas?month={{ selected_period.month }}&year={{ selected_period.year }}">Ver todos</a>
+      </div>
+      <div class="report-alert-list" data-report-alerts>
+        {% for alert in data.alerts %}
+        <div class="report-alert {{ alert.type }}">
+          <span>{{ alert.type[:1]|upper }}</span>
+          <p>{{ alert.message }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="panel report-specials">
+    <div class="panel-heading"><h2>Relatorios especiais</h2></div>
+    <div class="special-report-grid">
+      <a href="{{ period_url('web.relatorios_export_pdf') }}"><span>F</span><strong>Fechamento mensal</strong><small>Resumo completo do mes em PDF.</small></a>
+      <a href="{{ period_url('web.relatorios') }}"><span>C</span><strong>Comparativo mensal</strong><small>Compare meses e veja sua evolucao.</small></a>
+      <a href="{{ period_url('web.relatorios') }}"><span>A</span><strong>Relatorio anual</strong><small>Panorama completo do ano atual.</small></a>
+      <a href="{{ period_url('web.relatorios') }}"><span>X</span><strong>Fluxo de caixa</strong><small>Entradas, saidas e saldo mes a mes.</small></a>
+      <a href="{{ period_url('web.relatorios') }}"><span>%</span><strong>Impostos/IRPF</strong><small>Relatorio para declaracao.</small></a>
+      <a href="{{ period_url('web.relatorios_export_xlsx') }}"><span>E</span><strong>Exportar dados</strong><small>Exportar em CSV ou Excel.</small></a>
+    </div>
+  </section>
+</section>
+{% endblock %}

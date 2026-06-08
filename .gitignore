@@ -1,0 +1,14 @@
+.venv
+__pycache__
+__pycache__/
+*.pyc
+.env
+*.db
+data/*.db
+data/*.db-journal
+data/comprovante_*.jpg
+*.log
+uploads/
+app/static/uploads/
+instance/
+data/temp/

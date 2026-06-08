@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or "Meu Gestor Financeiro IA" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  </head>
+  <body data-selected-month="{{ selected_period.month }}" data-selected-year="{{ selected_period.year }}" data-selected-label="{{ selected_period.label }}">
+    <aside class="sidebar">
+      <button class="sidebar-toggle" type="button" aria-label="Recolher menu">&#9776;</button>
+      <a class="logo" href="{{ url_for('web.dashboard') }}">
+        <span class="logo-mark"><i></i></span>
+        <span>
+          <strong>Meu Gestor</strong>
+          <small>Financeiro IA</small>
+        </span>
+      </a>
+
+      {% set endpoint = request.endpoint or "" %}
+      {% set path = request.path %}
+      <nav class="side-nav">
+        <a class="{{ 'active' if endpoint == 'web.dashboard' else '' }}" href="{{ period_url('web.dashboard') }}"><span>&#8962;</span>Dashboard</a>
+        <a class="{{ 'active' if endpoint == 'web.receitas' else '' }}" href="{{ period_url('web.receitas') }}"><span>$</span>Receitas</a>
+        <a class="{{ 'active' if endpoint == 'web.lancamentos' else '' }}" href="{{ period_url('web.lancamentos') }}"><span>$</span>Lancamentos</a>
+        <a class="{{ 'active' if endpoint in ['web.contas_fixas', 'web.alterar_status_conta'] else '' }}" href="{{ period_url('web.contas_fixas') }}"><span>&#9638;</span>Contas Fixas</a>
+        <a class="{{ 'active' if endpoint == 'web.relatorios' else '' }}" href="{{ period_url('web.relatorios') }}"><span>&#9639;</span>Relatorios</a>
+        <a class="{{ 'active' if path.startswith('/metas') else '' }}" href="{{ period_url(month=selected_period.month, year=selected_period.year) if path.startswith('/metas') else '/metas?month=' ~ selected_period.month ~ '&year=' ~ selected_period.year }}"><span>&#9678;</span>Metas</a>
+        <a class="{{ 'active' if path.startswith('/alertas') else '' }}" href="{{ period_url(month=selected_period.month, year=selected_period.year) if path.startswith('/alertas') else '/alertas?month=' ~ selected_period.month ~ '&year=' ~ selected_period.year }}"><span>!</span>Alertas</a>
+        <a class="{{ 'active' if endpoint == 'web.assistente' else '' }}" href="{{ period_url('web.assistente') }}"><span>AI</span>Assistente IA</a>
+        <a class="{{ 'active' if path.startswith('/configuracoes') else '' }}" href="{{ period_url(month=selected_period.month, year=selected_period.year) if path.startswith('/configuracoes') else '/configuracoes?month=' ~ selected_period.month ~ '&year=' ~ selected_period.year }}"><span>&#9881;</span>Configuracoes</a>
+        {% if session.user and session.user.role == "admin" %}
+        <a class="{{ 'active' if endpoint.startswith('web.admin_') else '' }}" href="{{ period_url('web.admin_users') }}"><span>AD</span>Administracao</a>
+        {% endif %}
+      </nav>
+
+      <div class="profile-card">
+        <div class="profile-photo">{{ (session.user.name[:1] if session.user else "M") }}</div>
+        <div>
+          <strong>{{ session.user.name if session.user else "Miguel" }}</strong>
+          <small>Plano Premium</small>
+        </div>
+        <a class="logout-link" href="{{ url_for('web.logout') }}">Sair</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Controle financeiro inteligente</p>
+          <h1>{{ page_title or "Dashboard" }}</h1>
+        </div>
+        <div class="top-actions">
+          <div class="period-selector" aria-label="Competencia mensal">
+            <a class="period-nav" href="{{ previous_period_url }}" title="Mes anterior">&lt;</a>
+            <form class="period-form" data-period-form method="get" action="{{ request.path }}">
+              {% for key, value in request.args.items() %}
+                {% if key not in ['month', 'year', 'page'] %}
+                  <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+              {% endfor %}
+              <select name="month" aria-label="Mes">
+                {% for number, name in period_months.items() %}
+                  <option value="{{ number }}" {{ 'selected' if number == selected_period.month else '' }}>{{ name }}</option>
+                {% endfor %}
+              </select>
+              <select name="year" aria-label="Ano">
+                {% for year in period_years %}
+                  <option value="{{ year }}" {{ 'selected' if year == selected_period.year else '' }}>{{ year }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <a class="period-nav" href="{{ next_period_url }}" title="Proximo mes">&gt;</a>
+            <a class="period-current" href="{{ current_period_url }}">Mes atual</a>
+          </div>
+          <button class="notification-button">!<b>3</b></button>
+        </div>
+      </header>
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <div class="modal-backdrop" id="quick-category-modal" hidden>
+      <aside class="quick-category-panel">
+        <div class="transaction-modal-header">
+          <div class="transaction-modal-title">
+            <span class="transaction-modal-icon">C</span>
+            <div>
+              <h2>Nova Categoria</h2>
+              <p>Crie uma categoria sem sair do cadastro atual.</p>
+            </div>
+          </div>
+          <button class="modal-close" type="button" data-quick-category-close>X</button>
+        </div>
+        <form class="quick-category-form" data-quick-category-form>
+          <input type="hidden" name="target_select">
+          <label>Nome <b>*</b><input name="name" maxlength="60" required placeholder="Ex.: Mercado"></label>
+          <label>Tipo <b>*</b>
+            <select name="type" required>
+              <option value="receita">Receita</option>
+              <option value="despesa">Despesa</option>
+              <option value="conta_fixa">Conta Fixa</option>
+              <option value="geral">Geral</option>
+            </select>
+          </label>
+          <label>Icone <input name="icon" maxlength="3" placeholder="M"></label>
+          <label>Cor <input type="color" name="color" value="#38bdf8"></label>
+          <div class="category-form-actions">
+            <button class="secondary-button" type="button" data-quick-category-close>Cancelar</button>
+            <button class="primary-button" type="submit">Salvar categoria</button>
+          </div>
+          <p class="form-feedback" data-quick-category-feedback></p>
+        </form>
+      </aside>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

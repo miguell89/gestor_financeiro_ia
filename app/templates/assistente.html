@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set page_title = "Assistente IA" %}
+
+{% block content %}
+<section class="assistant-page">
+  <article class="panel ai-card big">
+    <div class="assistant-avatar">IA</div>
+    <h2>Seu copiloto financeiro</h2>
+    <p>{{ data.assistant_message }}</p>
+    <div class="chat-preview">
+      <span>Voce pode dizer no Telegram:</span>
+      <strong>"Gastei 50 reais no mercado"</strong>
+      <strong>"Quais contas vencem essa semana?"</strong>
+      <strong>"Quanto ainda posso gastar este mes?"</strong>
+    </div>
+  </article>
+</section>
+{% endblock %}

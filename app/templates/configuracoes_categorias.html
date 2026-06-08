@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set page_title = "Categorias" %}
+
+{% block content %}
+<section class="categories-settings-page" data-categories-settings>
+  <div class="breadcrumb">Configuracoes <span>&gt;</span> Categorias</div>
+
+  <section class="welcome-row settings-hero">
+    <div>
+      <h2>Categorias</h2>
+      <p>Configure categorias usadas em receitas, lancamentos, contas fixas, relatorios e IA.</p>
+    </div>
+    <button class="primary-button" type="button" data-category-new>+ Nova Categoria</button>
+  </section>
+
+  <section class="settings-category-layout">
+    <article class="panel categories-table-panel">
+      <div class="panel-heading">
+        <h2>Categorias cadastradas</h2>
+        <select data-category-filter>
+          <option value="">Todos tipos</option>
+          {% for type in category_types %}
+          <option value="{{ type }}">{{ type|replace("_", " ")|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="transactions-table categories-table">
+          <thead>
+            <tr><th>Categoria</th><th>Tipo</th><th>Cor</th><th>Status</th><th>Acoes</th></tr>
+          </thead>
+          <tbody data-categories-body>
+            {% for category in categories %}
+            <tr data-category-row data-category-id="{{ category.id }}" data-type="{{ category.type }}" data-active="{{ category.active }}">
+              <td><div class="category-name-cell"><span style="background: {{ category.color }}">{{ category.icon or category.name[:1] }}</span><strong>{{ category.name }}</strong></div></td>
+              <td><em class="badge category-badge">{{ category.type|replace("_", " ")|title }}</em></td>
+              <td><code>{{ category.color }}</code></td>
+              <td><em class="status {{ 'pago' if category.active else 'cancelado' }}">{{ 'ativa' if category.active else 'inativa' }}</em></td>
+              <td>
+                <div class="row-actions">
+                  <button type="button" data-category-edit='{{ category|tojson }}'>E</button>
+                  <button type="button" data-category-deactivate="{{ category.id }}">D</button>
+                  <button type="button" data-category-delete="{{ category.id }}">X</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <aside class="panel category-editor-panel">
+      <div class="panel-heading"><h2 data-category-form-title>Nova categoria</h2></div>
+      <form data-category-admin-form>
+        <input type="hidden" name="id">
+        <label>Nome <b>*</b><input name="name" maxlength="60" required placeholder="Ex.: Mercado"></label>
+        <label>Tipo <b>*</b>
+          <select name="type" required>
+            {% for type in category_types %}
+            <option value="{{ type }}">{{ type|replace("_", " ")|title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Icone <input name="icon" maxlength="3" placeholder="M"></label>
+        <label>Cor <input type="color" name="color" value="#38bdf8"></label>
+        <label>Limite mensal <input type="number" step="0.01" min="0" name="monthly_limit" value="0"></label>
+        <label class="switch-row compact"><input type="checkbox" name="active" value="1" checked><span><strong>Categoria ativa</strong><small>Aparece nos formularios e filtros.</small></span><i></i></label>
+        <div class="category-form-actions">
+          <button class="secondary-button" type="button" data-category-reset>Limpar</button>
+          <button class="primary-button" type="submit">Salvar categoria</button>
+        </div>
+        <p class="form-feedback" data-category-feedback></p>
+      </form>
+    </aside>
+  </section>
+</section>
+{% endblock %}

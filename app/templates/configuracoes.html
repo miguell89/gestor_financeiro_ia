@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set page_title = "Configuracoes" %}
+
+{% block content %}
+<section class="settings-page">
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Configuracoes</div>
+
+  <section class="welcome-row settings-hero">
+    <div>
+      <h2>Configuracoes</h2>
+      <p>Ajustes do perfil, notificacoes, categorias e integracoes do sistema.</p>
+    </div>
+  </section>
+
+  <section class="settings-grid">
+    <a class="settings-tile" href="#"><span>P</span><strong>Perfil</strong><small>Dados pessoais e preferencias.</small></a>
+    <a class="settings-tile" href="{{ period_url('web.configuracoes_telegram') }}"><span>T</span><strong>Telegram</strong><small>Vinculo e automacoes do bot.</small></a>
+    <a class="settings-tile" href="/alertas?month={{ selected_period.month }}&year={{ selected_period.year }}"><span>N</span><strong>Notificacoes</strong><small>Alertas e lembretes financeiros.</small></a>
+    <a class="settings-tile active" href="{{ period_url('web.configuracoes_categorias') }}"><span>C</span><strong>Categorias</strong><small>Receitas, despesas e contas fixas.</small></a>
+    <a class="settings-tile" href="#"><span>I</span><strong>Integracoes</strong><small>IA, comprovantes e servicos externos.</small></a>
+    <a class="settings-tile" href="#"><span>S</span><strong>Seguranca</strong><small>Acesso, senha e permissoes.</small></a>
+  </section>
+</section>
+{% endblock %}

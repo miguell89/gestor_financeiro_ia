@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% set page_title = "Receitas" %}
+
+{% block content %}
+<section class="revenues-page">
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Receitas</div>
+
+  <section class="welcome-row revenues-hero">
+    <div>
+      <h2>Receitas</h2>
+      <p>Controle tudo que entra: previsto, recebido, recorrente e atrasado.</p>
+    </div>
+    <button class="primary-button modal-open" type="button" data-modal-target="revenue-modal">+ Nova Receita</button>
+  </section>
+
+  <section class="metrics-grid revenue-kpis">
+    <article class="metric-card"><div class="metric-icon icon-green">R</div><span>Receitas do mes</span><strong data-revenue-summary="receitas_mes">{{ summary.receitas_mes|brl }}</strong><small>recebidas no mes</small></article>
+    <article class="metric-card"><div class="metric-icon icon-blue">P</div><span>Receitas previstas</span><strong data-revenue-summary="receitas_previstas">{{ summary.receitas_previstas|brl }}</strong><small>planejadas</small></article>
+    <article class="metric-card"><div class="metric-icon icon-green">OK</div><span>Receitas recebidas</span><strong data-revenue-summary="receitas_recebidas">{{ summary.receitas_recebidas|brl }}</strong><small><b data-revenue-summary="percentual_recebido">{{ summary.percentual_recebido }}%</b> do previsto</small></article>
+    <article class="metric-card"><div class="metric-icon icon-purple">A</div><span>Receitas pendentes</span><strong data-revenue-summary="receitas_pendentes">{{ summary.receitas_pendentes|brl }}</strong><small>a receber</small></article>
+    <article class="metric-card"><div class="metric-icon icon-teal">V</div><span>Proximo recebimento</span><strong data-revenue-summary="proximo_nome">{{ summary.proximo_nome }}</strong><small><span data-revenue-summary="proximo_data">{{ summary.proximo_data }}</span> | <span data-revenue-summary="proximo_valor">{{ summary.proximo_valor|brl }}</span></small></article>
+  </section>
+
+  <section class="revenues-layout">
+    <article class="panel revenues-main">
+      <form class="filters-bar revenue-filters" method="get" data-revenue-filters>
+        <label class="search-field">Pesquisar
+          <input name="search" placeholder="Salario, aluguel, freelance...">
+        </label>
+        <label>Categoria
+          <select name="category"><option value="">Todas categorias</option>{% for category in categories %}<option>{{ category }}</option>{% endfor %}</select>
+        </label>
+        <label>Status
+          <select name="status"><option value="">Todos status</option>{% for status in statuses %}<option>{{ status }}</option>{% endfor %}</select>
+        </label>
+        <label>Data prevista
+          <select name="expected_period"><option value="">Todo periodo</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option></select>
+        </label>
+        <label>Tipo
+          <select name="type"><option value="">Todos tipos</option>{% for type in types %}<option>{{ type }}</option>{% endfor %}</select>
+        </label>
+        <button class="secondary-button" type="submit">Filtrar</button>
+        <button class="secondary-button btn-clear-revenue-filters" type="button">Limpar filtros</button>
+        <button class="secondary-button" type="submit" name="export" value="csv">Exportar CSV</button>
+      </form>
+
+      <div class="revenue-table-wrap">
+        <table class="transactions-table revenue-table">
+          <thead>
+            <tr><th>Data prevista</th><th>Recebimento</th><th>Descricao</th><th>Categoria</th><th>Status</th><th>Recorrencia</th><th>Valor</th><th>Acoes</th></tr>
+          </thead>
+          <tbody data-revenues-body>
+            {% for item in revenues %}
+            <tr data-revenue-id="{{ item.id }}">
+              <td>{{ item.expected_date }}</td>
+              <td>{{ item.received_date or "-" }}</td>
+              <td><div class="transaction-description"><span class="row-icon">{{ item.name[:1] }}</span><div><strong>{{ item.name }}</strong><small>{{ item.type }}</small></div></div></td>
+              <td><em class="badge category-badge">{{ item.category }}</em></td>
+              <td><em class="status revenue-status {{ item.status }}">{{ item.status }}</em></td>
+              <td>{{ item.recurrence }}</td>
+              <td class="receita">{{ item.expected_amount|brl }}</td>
+              <td><div class="row-actions"><button class="btn-edit-revenue" type="button" data-revenue-id="{{ item.id }}">E</button><button class="btn-receive-revenue" type="button" data-revenue-id="{{ item.id }}">R</button><button class="btn-duplicate-revenue" type="button" data-revenue-id="{{ item.id }}">D</button><button class="btn-delete-revenue" type="button" data-revenue-id="{{ item.id }}">X</button></div></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <aside class="panel revenue-analysis">
+      <div class="panel-heading"><h2>Receitas por categoria</h2></div>
+      <div class="category-bars" data-revenue-category-bars>
+        {% for item in summary.category_bars %}
+        <div class="category-bar"><span><i></i>{{ item.name }}</span><div class="bar-track"><b style="width: {{ item.percent }}%;"></b></div><strong>{{ item.total|brl }}</strong><em>{{ item.percent }}%</em></div>
+        {% endfor %}
+      </div>
+      <div class="success-note" data-revenue-ai>Voce recebeu {{ summary.percentual_recebido }}% das receitas previstas deste mes.</div>
+      <div class="cashflow-chart revenue-trend">{% for h in [32,45,52,48,64,58,74,80,76,88,92,96] %}<span style="--income: {{ h }}%; --expense: 0%;"></span>{% endfor %}</div>
+    </aside>
+  </section>
+</section>
+
+<div class="modal-backdrop" id="revenue-modal" hidden>
+  <aside class="slide-panel revenue-slide-panel">
+    <div class="revenue-modal-header">
+      <div class="revenue-modal-title">
+        <span class="revenue-modal-icon">R</span>
+        <div>
+          <h2 data-revenue-modal-title>Nova receita</h2>
+          <p>Cadastre uma nova receita ou configure uma receita recorrente.</p>
+        </div>
+      </div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+
+    <form class="revenue-smart-form" method="post" data-revenue-form>
+      <input type="hidden" name="id">
+      <input type="hidden" name="next_expected_date">
+      <input type="hidden" name="last_generated_date">
+
+      <div class="revenue-form-grid">
+        <div class="revenue-form-left">
+          <section class="smart-section">
+            <h3><span>I</span>Informacoes principais</h3>
+            <div class="smart-grid">
+              <label class="wide">Nome da receita <b>*</b>
+                <input name="name" placeholder="Ex.: Salario, Aluguel, Freelance, Dividendos..." required maxlength="80">
+              </label>
+              <label>Categoria <b>*</b>
+                <select name="category" required data-category-select data-category-kind="receita">{% for category in categories %}<option>{{ category }}</option>{% endfor %}<option value="__new__">+ Nova Categoria</option></select>
+              </label>
+              <label>Valor previsto <b>*</b>
+                <input type="number" step="0.01" min="0" name="expected_amount" placeholder="0,00" required>
+              </label>
+              <label>Data prevista <b>*</b>
+                <input type="date" name="expected_date" value="{{ today }}" required>
+              </label>
+              <label class="received-date-field">Data de recebimento <small>(opcional)</small>
+                <input type="date" name="received_date">
+              </label>
+              <label>Tipo de receita <b>*</b>
+                <select name="type" required>
+                  <option value="pontual">Entrada pontual</option>
+                  <option value="recorrente">Entrada recorrente</option>
+                </select>
+              </label>
+              <label>Status inicial <b>*</b>
+                <select name="status" required>{% for status in statuses %}<option>{{ status }}</option>{% endfor %}</select>
+              </label>
+              <label class="wide">Observacao <small>(opcional)</small>
+                <textarea name="notes" maxlength="200" placeholder="Adicione observacoes sobre esta receita..."></textarea>
+                <em class="char-count" data-revenue-char-count>0/200</em>
+              </label>
+            </div>
+          </section>
+
+          <section class="smart-section recurrence-section">
+            <h3><span>C</span>Recorrencia</h3>
+            <label class="switch-row">
+              <input type="checkbox" name="is_recurring" value="1" data-recurring-toggle>
+              <span><strong>Receita recorrente</strong><small>Ative para repetir esta receita automaticamente.</small></span>
+              <i></i>
+            </label>
+            <div class="recurrence-options" data-recurring-options>
+              <div class="smart-grid three">
+                <label>Repetir a cada
+                  <select name="recurrence_interval">
+                    <option value="mensal">1 mes</option>
+                    <option value="quinzenal">15 dias</option>
+                    <option value="semanal">7 dias</option>
+                    <option value="anual">1 ano</option>
+                  </select>
+                </label>
+                <label>Todo dia
+                  <input type="number" min="1" max="28" name="recurrence_day" placeholder="05">
+                </label>
+                <label>Data de inicio
+                  <input type="date" name="recurrence_start_date" value="{{ today }}">
+                </label>
+              </div>
+              <div class="info-strip">No dia configurado, o sistema criara automaticamente uma previsao com base nestas regras.</div>
+            </div>
+          </section>
+
+          <section class="smart-section intelligent-section" data-intelligent-section>
+            <label class="switch-row">
+              <input type="checkbox" name="ask_value_before_generate" value="1" data-smart-recurring-toggle>
+              <span><strong>Receita recorrente inteligente</strong><small>O sistema pergunta se o valor continua igual antes de confirmar.</small></span>
+              <i></i>
+            </label>
+            <div class="smart-card-grid">
+              <label class="check-card">
+                <input type="checkbox" name="auto_update_default_value" value="1">
+                <span><strong>Atualizar valor padrao automaticamente</strong><small>Usar novo valor como padrao nos proximos meses.</small></span>
+              </label>
+              <label class="check-card">
+                <input type="checkbox" name="notify_registered" value="1" checked>
+                <span><strong>Notificar quando registrada</strong><small>Enviar confirmacao quando a receita for recebida.</small></span>
+              </label>
+              <label class="check-card upload-card">
+                <input type="file" name="receipt_file" accept=".pdf,image/*" data-revenue-receipt-input>
+                <span><strong>Anexar comprovante</strong><small data-revenue-receipt-file-name>Pix, deposito, recibo ou transferencia</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="smart-section revenue-goal-section">
+            <h3><span>G</span>Direcionar para meta</h3>
+            <p class="muted-text">Deseja direcionar parte dessa receita para alguma meta?</p>
+            <div class="smart-grid two">
+              <label>Meta
+                <select name="goal_id">
+                  <option value="">Nao agora</option>
+                  {% for goal in goals %}
+                  <option value="{{ goal.id }}">{{ goal.name }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Valor para meta
+                <input type="number" step="0.01" min="0" name="goal_amount" placeholder="0,00">
+              </label>
+            </div>
+          </section>
+        </div>
+
+        <aside class="revenue-form-right">
+          <section class="smart-section preview-section">
+            <h3><span>P</span>Previa da receita</h3>
+            <article class="revenue-preview-card">
+              <div class="preview-top">
+                <span class="preview-avatar">R</span>
+                <div><strong data-preview-name>Nova receita</strong><em data-preview-status>Prevista</em></div>
+                <p><small>Valor previsto</small><b data-preview-amount>R$ 0,00</b></p>
+              </div>
+              <dl>
+                <div><dt>Categoria</dt><dd data-preview-category>Outros</dd></div>
+                <div><dt>Data prevista</dt><dd data-preview-date>{{ today }}</dd></div>
+                <div><dt>Recorrencia</dt><dd data-preview-recurrence>Pontual</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="smart-section next-month-card">
+            <h3>Como sera no proximo mes?</h3>
+            <p>No dia <b data-preview-next-date>-</b> sera criada automaticamente:</p>
+            <div class="next-preview-row">
+              <strong data-preview-next-name>Nova receita</strong>
+              <span data-preview-next-status>Prevista</span>
+              <b data-preview-next-amount>R$ 0,00</b>
+            </div>
+          </section>
+
+          <section class="smart-section telegram-smart-card" data-smart-preview>
+            <h3>Receita recorrente inteligente</h3>
+            <p>No dia do recebimento, voce sera notificado e o sistema perguntara:</p>
+            <blockquote data-preview-question>"O valor continua R$ 0,00?"</blockquote>
+            <small>Voce podera confirmar ou informar um novo valor pelo Telegram.</small>
+          </section>
+
+          <section class="smart-section alerts-card">
+            <h3>Alertas e notificacoes</h3>
+            <label><input type="checkbox" name="notify_day_before" value="1" checked> Notificar 1 dia antes</label>
+            <label><input type="checkbox" name="notify_due_day" value="1" checked> Notificar no dia previsto</label>
+            <label><input type="checkbox" name="notify_overdue" value="1" checked> Notificar quando estiver atrasada</label>
+          </section>
+        </aside>
+      </div>
+
+      <div class="revenue-modal-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button revenue-save-button" type="submit">Salvar receita</button>
+      </div>
+    </form>
+  </aside>
+</div>
+{% endblock %}

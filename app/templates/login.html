@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | Meu Gestor Financeiro IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  </head>
+  <body class="login-body">
+    <main class="login-shell">
+      <section class="login-brand-panel">
+        <a class="logo login-logo" href="{{ url_for('web.login') }}">
+          <span class="logo-mark"><i></i></span>
+          <span>
+            <strong>Meu Gestor</strong>
+            <small>Financeiro IA</small>
+          </span>
+        </a>
+        <h1>Seu dinheiro organizado com IA, alertas e controle diario.</h1>
+        <p>Entre para acompanhar saldo, receitas, despesas, contas fixas e conversar com o assistente financeiro.</p>
+        <div class="login-preview">
+          <span>Saldo previsto</span>
+          <strong>R$ 1.580,00</strong>
+          <small>Assistente IA ativo</small>
+        </div>
+      </section>
+
+      <form class="login-card" method="post">
+        <p class="eyebrow">Acesso seguro</p>
+        <h2>Entrar no sistema</h2>
+
+        {% if error %}
+        <div class="login-error">{{ error }}</div>
+        {% endif %}
+
+        <label>Email
+          <input type="email" name="email" value="miguel@email.com" autocomplete="email" required>
+        </label>
+        <label>Senha
+          <input type="password" name="password" value="123456" autocomplete="current-password" required>
+        </label>
+        <button class="primary-button" type="submit">Acessar dashboard</button>
+        <p class="login-hint">Usuario demo: miguel@email.com / 123456</p>
+      </form>
+    </main>
+  </body>
+</html>

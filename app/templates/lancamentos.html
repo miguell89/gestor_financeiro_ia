@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% set page_title = "Lancamentos financeiros" %}
+
+{% block content %}
+<section class="transactions-page" data-current-balance="{{ summary.saldo }}">
+  <div class="breadcrumb">Dashboard <span>&gt;</span> Lancamentos</div>
+
+  <section class="welcome-row transactions-hero">
+    <div>
+      <h2>Lancamentos financeiros</h2>
+      <p>Gerencie receitas, despesas, IA e Telegram em um so lugar.</p>
+    </div>
+    <button class="primary-button modal-open" type="button" data-modal-target="transaction-modal">+ Novo Lancamento</button>
+  </section>
+
+  <section class="metrics-grid transaction-kpis">
+    <article class="metric-card"><div class="metric-icon icon-green">R</div><span>Receitas do mes</span><strong data-summary="receitas">{{ summary.receitas|brl }}</strong><small><b class="trend up">{{ summary.receitas_delta }}%</b> vs anterior</small></article>
+    <article class="metric-card"><div class="metric-icon icon-red">D</div><span>Despesas do mes</span><strong data-summary="despesas">{{ summary.despesas|brl }}</strong><small><b class="trend down">{{ summary.despesas_delta|abs }}%</b> vs anterior</small></article>
+    <article class="metric-card"><div class="metric-icon icon-blue">S</div><span>Saldo do mes</span><strong data-summary="saldo">{{ summary.saldo|brl }}</strong><small><b class="trend up">{{ summary.saldo_delta }}%</b> vs anterior</small></article>
+    <article class="metric-card"><div class="metric-icon icon-purple">T</div><span>Total de lancamentos</span><strong data-summary="total_lancamentos">{{ summary.total_lancamentos }}</strong><small><b class="trend up">{{ summary.total_delta }}%</b> vs anterior</small></article>
+    <article class="metric-card"><div class="metric-icon icon-teal">M</div><span>Media diaria gastos</span><strong data-summary="media_diaria">{{ summary.media_diaria|brl }}</strong><small><b class="trend down">{{ summary.media_delta|abs }}%</b> vs anterior</small></article>
+  </section>
+
+  <section class="transactions-insights">
+    <article class="panel category-panel">
+      <div class="panel-heading">
+        <h2>Lancamentos por categoria</h2>
+        <a href="{{ period_url('web.configuracoes_categorias') }}">Ver todas</a>
+      </div>
+      <div class="category-bars" data-category-bars>
+        {% for item in summary.category_bars %}
+        <div class="category-bar">
+          <span><i></i>{{ item.name }}</span>
+          <div class="bar-track"><b style="width: {{ item.percent }}%;"></b></div>
+          <strong>{{ item.total|brl }}</strong>
+          <em>{{ item.percent }}%</em>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="panel cashflow-card">
+      <div class="panel-heading">
+        <h2>Fluxo de caixa - ultimos 30 dias</h2>
+        <select class="period-small" aria-label="Periodo do fluxo">
+          <option>7 dias</option>
+          <option selected>30 dias</option>
+          <option>90 dias</option>
+        </select>
+      </div>
+      <div class="cashflow-chart">
+        {% for height in [42, 55, 78, 48, 88, 64, 96, 72, 82, 100] %}
+        <span style="--income: {{ height }}%; --expense: {{ [30, 36, 28, 52, 44, 48, 60, 40, 46, 58][loop.index0] }}%;"></span>
+        {% endfor %}
+      </div>
+      <div class="cashflow-totals">
+        <div><span>Total receitas</span><strong class="receita" data-flow="receitas">{{ summary.receitas|brl }}</strong></div>
+        <div><span>Total despesas</span><strong class="despesa" data-flow="despesas">{{ summary.despesas|brl }}</strong></div>
+        <div><span>Saldo</span><strong data-flow="saldo">{{ summary.saldo|brl }}</strong></div>
+      </div>
+    </article>
+
+    <div class="side-insights">
+      <article class="panel quick-ai-card">
+        <div class="panel-heading">
+          <h2>Lancamento rapido com IA</h2>
+          <button class="panel-link-inline modal-open" type="button" data-modal-target="transaction-modal">Novo</button>
+        </div>
+        <div class="quick-ai-box">
+          <span>Digite ou fale algo como:</span>
+          <p>"Gastei 50 reais no mercado"</p>
+          <p>"Recebi 1500 de salario"</p>
+          <p>"Paguei a conta de luz"</p>
+        </div>
+        <div class="quick-actions">
+          <button class="secondary-button" type="button">Enviar comprovante</button>
+          <a class="secondary-button" href="{{ period_url('web.assistente') }}">Usar Telegram</a>
+        </div>
+      </article>
+
+      <article class="panel origin-card">
+        <div class="panel-heading"><h2>Origem dos lancamentos</h2></div>
+        <div class="origin-layout">
+          <div class="origin-donut"></div>
+          <div class="origin-list" data-origin-list>
+            {% for item in summary.origin_bars %}
+            <span><i></i>{{ item.name }} <b>{{ item.percent }}%</b></span>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel transactions-table-card">
+    <form class="filters-bar" method="get" data-transactions-filters>
+      <label class="search-field">Buscar lancamento
+        <input name="search" value="{{ search }}" placeholder="Buscar lancamento...">
+      </label>
+      <label>Periodo
+        <select name="period">
+          <option value="">Periodo</option>
+          <option value="7" {% if selected_days_period == "7" %}selected{% endif %}>7 dias</option>
+          <option value="30" {% if selected_days_period == "30" %}selected{% endif %}>30 dias</option>
+          <option value="90" {% if selected_days_period == "90" %}selected{% endif %}>90 dias</option>
+        </select>
+      </label>
+      <label>Categoria
+        <select name="category_id">
+          <option value="">Todas categorias</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Origem
+        <select name="origin">
+          <option value="">Todas origens</option>
+          {% for origin in origins %}
+          <option value="{{ origin }}" {% if selected_origin == origin %}selected{% endif %}>{{ origin }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Status
+        <select name="status">
+          <option value="">Todos status</option>
+          {% for status in statuses %}
+          <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="secondary-button" type="submit">Filtrar</button>
+      <button class="secondary-button btn-clear-filters" type="button">Limpar filtros</button>
+      <button class="secondary-button" type="submit" name="export" value="csv">Exportar CSV</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="transactions-table">
+        <thead>
+          <tr><th>Data</th><th>Hora</th><th>Descricao</th><th>Categoria</th><th>Origem</th><th>Forma pgto</th><th>Status</th><th>Valor</th><th>Acoes</th></tr>
+        </thead>
+        <tbody data-transactions-body>
+          {% for item in transactions %}
+          <tr data-transaction-id="{{ item.id }}">
+            <td>{{ item.date }}</td>
+            <td>{{ (item.created_at or "")[11:16] }}</td>
+            <td><div class="transaction-description"><span class="row-icon">{{ (item.category_name or item.description or "?")[:1] }}</span><div><strong>{{ item.description }}</strong><small>{{ item.type|capitalize }}</small></div></div></td>
+            <td><em class="badge category-badge">{{ item.category_name or "-" }}</em></td>
+            <td><em class="badge origin-badge">{{ item.origin }}</em></td>
+            <td>{{ item.payment_method }}</td>
+            <td><em class="status {{ item.status }}">{{ item.status }}</em></td>
+            <td class="{{ item.type }}">{{ item.amount|brl }}</td>
+            <td><div class="row-actions"><button class="btn-edit-transaction" type="button" title="Editar" data-transaction-id="{{ item.id }}">E</button><button class="btn-duplicate-transaction" type="button" title="Duplicar" data-transaction-id="{{ item.id }}">D</button><button class="btn-delete-transaction" type="button" title="Excluir" data-transaction-id="{{ item.id }}">X</button><button type="button" title="Ver comprovante">P</button></div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span data-pagination-label>Mostrando {{ start_record }} a {{ end_record }} de {{ total_records }} lancamentos</span>
+      <div class="pagination-pages" data-pagination-pages>
+        {% for number in range(1, total_pages + 1) %}
+        <a class="{{ 'active' if number == page else '' }}" href="{{ url_for('web.lancamentos', page=number, per_page=per_page, search=search, period=selected_days_period, category_id=selected_category, origin=selected_origin, status=selected_status, month=selected_period.month, year=selected_period.year) }}">{{ number }}</a>
+        {% endfor %}
+      </div>
+      <form method="get" data-per-page-form>
+        <input type="hidden" name="search" value="{{ search }}">
+        <input type="hidden" name="period" value="{{ selected_days_period }}">
+        <input type="hidden" name="category_id" value="{{ selected_category }}">
+        <input type="hidden" name="origin" value="{{ selected_origin }}">
+        <input type="hidden" name="status" value="{{ selected_status }}">
+        <select name="per_page" onchange="this.form.submit()">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10 por pagina</option>
+          <option value="25" {% if per_page == 25 %}selected{% endif %}>25 por pagina</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50 por pagina</option>
+        </select>
+      </form>
+    </div>
+  </section>
+</section>
+
+<div class="modal-backdrop" id="transaction-modal" hidden>
+  <aside class="slide-panel transaction-slide-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title">
+        <span class="transaction-modal-icon">+</span>
+        <div>
+          <h2 data-modal-title>Novo lancamento</h2>
+          <p>Registre uma nova entrada ou saida no seu financeiro.</p>
+        </div>
+      </div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+
+    <form class="transaction-smart-form" method="post" enctype="multipart/form-data" data-transaction-form>
+      <input type="hidden" name="id">
+      <input type="hidden" name="fixed_bill_id">
+      <input type="hidden" name="revenue_id">
+      <input type="hidden" name="type" value="despesa">
+
+      <div class="transaction-form-grid">
+        <div class="transaction-form-left">
+          <section class="smart-section">
+            <h3><span>1</span>Informacoes principais</h3>
+            <div class="transaction-type-picker" data-transaction-type-picker>
+              <button class="type-card expense active" type="button" data-type-value="despesa"><b>v</b><span>Despesa</span></button>
+              <button class="type-card income" type="button" data-type-value="receita"><b>^</b><span>Receita</span></button>
+            </div>
+            <div class="smart-grid transaction-fields-grid">
+              <label>Data <b>*</b><input type="date" name="date" value="{{ today }}" required></label>
+              <label>Valor <b>*</b><input type="number" step="0.01" min="0" name="amount" placeholder="0,00" required></label>
+              <label>Categoria <b>*</b><select name="category_id" required data-category-select data-category-kind="despesa"><option value="">Selecione uma categoria</option>{% for cat in categories %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}<option value="__new__">+ Nova Categoria</option></select></label>
+              <label>Forma de pagamento <b>*</b><select name="payment_method" required><option value="">Selecione</option>{% for method in payment_methods %}<option>{{ method }}</option>{% endfor %}</select></label>
+              <label class="wide">Descricao <input name="description" maxlength="120" placeholder="Ex.: Supermercado, Salario, Pix recebido..."><em class="char-count" data-transaction-description-count>0/120</em></label>
+              <label>Status <b>*</b><select name="status" required>{% for status in statuses %}<option>{{ status }}</option>{% endfor %}</select></label>
+              <label>Origem <select name="origin">{% for origin in origins %}<option>{{ origin }}</option>{% endfor %}</select></label>
+              <label>Projeto / Centro de custo <small>(opcional)</small><input name="project_center" placeholder="Selecione ou digite"></label>
+              <label class="wide">Observacoes <small>(opcional)</small><textarea name="notes" maxlength="200" placeholder="Detalhes adicionais sobre este lancamento..."></textarea><em class="char-count" data-transaction-notes-count>0/200</em></label>
+            </div>
+          </section>
+
+          <section class="smart-section transaction-more-options">
+            <h3><span>2</span>Mais opcoes</h3>
+            <div class="transaction-option-grid">
+              <label class="option-card"><input type="checkbox" name="is_recurring" value="1" data-transaction-recurring-toggle><span><strong>Lancamento recorrente</strong><small>Repetir este lancamento</small></span><i></i></label>
+              <label class="option-card upload-card"><input type="file" name="receipt_file" accept=".pdf,image/*" data-receipt-input><span><strong>Anexar comprovante</strong><small data-receipt-file-name>Adicionar imagem ou PDF</small></span><b>+</b></label>
+              <label class="option-card"><input type="checkbox" name="split_enabled" value="1"><span><strong>Dividir lancamento</strong><small>Dividir entre categorias futuramente</small></span><i></i></label>
+              <label class="option-card wide"><input type="checkbox" name="reminder_enabled" value="1" checked><span><strong>Lembretes e alertas</strong><small>Receber notificacoes deste lancamento</small></span><i></i></label>
+            </div>
+            <div class="recurring-transaction-options" data-transaction-recurring-options hidden>
+              <div class="smart-grid three">
+                <label>Frequencia <select name="recurrence_frequency"><option value="mensal">Mensal</option><option value="semanal">Semanal</option><option value="quinzenal">Quinzenal</option><option value="anual">Anual</option></select></label>
+                <label>Dia de repeticao <input type="number" min="1" max="28" name="recurrence_day" placeholder="05"></label>
+                <label>Data final <input type="date" name="recurrence_end_date"></label>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="transaction-form-right">
+          <section class="smart-section transaction-summary-card">
+            <h3><span>R</span>Resumo do lancamento</h3>
+            <article class="transaction-preview-card expense" data-transaction-preview-card>
+              <div class="preview-top">
+                <span class="preview-avatar" data-transaction-preview-icon>v</span>
+                <div><strong data-transaction-preview-type>Despesa</strong><em data-transaction-preview-status>Pago</em></div>
+                <p><small>Valor</small><b data-transaction-preview-amount>R$ 0,00</b></p>
+              </div>
+              <dl>
+                <div><dt>Data</dt><dd data-transaction-preview-date>{{ today }}</dd></div>
+                <div><dt>Categoria</dt><dd data-transaction-preview-category>Nao selecionada</dd></div>
+                <div><dt>Forma de pagamento</dt><dd data-transaction-preview-payment>Nao selecionada</dd></div>
+                <div><dt>Descricao</dt><dd data-transaction-preview-description>Nao informada</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="smart-section impact-card">
+            <h3><span>$</span>Impacto no seu financeiro</h3>
+            <p>Este lancamento sera considerado no mes: <b data-impact-period>{{ selected_period.label }}</b></p>
+            <div class="impact-lines">
+              <span>Saldo atual <strong data-impact-current>{{ summary.saldo|brl }}</strong></span>
+              <span>Impacto deste lancamento <strong data-impact-value>- R$ 0,00</strong></span>
+            </div>
+            <div class="projected-balance">Saldo projetado <strong data-impact-projected>{{ summary.saldo|brl }}</strong></div>
+          </section>
+
+          <section class="smart-section smart-tips-card">
+            <h3><span>AI</span>Dicas inteligentes</h3>
+            <div class="tips-body">
+              <span class="tips-icon">AI</span>
+              <p data-transaction-tip>Preencha categoria e valor para receber uma dica simples sobre este lancamento.</p>
+              <div class="tip-progress"><i data-tip-progress style="width: 0%;"></i></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="transaction-modal-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button transaction-save-button" type="submit">Salvar lancamento</button>
+      </div>
+    </form>
+  </aside>
+</div>
+{% endblock %}

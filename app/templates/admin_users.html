@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% set page_title = "Administracao" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-heading">
+    <h2>Usuarios</h2>
+    <a href="{{ url_for('web.admin_logs') }}">Logs do sistema</a>
+  </div>
+
+  <form class="admin-filter" method="get">
+    <input name="q" value="{{ filters.get('q', '') }}" placeholder="Nome, email ou Telegram ID">
+    <select name="status">
+      <option value="">Todos os status</option>
+      <option value="ativo" {% if filters.get('status') == 'ativo' %}selected{% endif %}>Ativo</option>
+      <option value="inativo" {% if filters.get('status') == 'inativo' %}selected{% endif %}>Inativo</option>
+    </select>
+    <button class="primary-button">Filtrar</button>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Telegram ID</th>
+          <th>Telegram</th>
+          <th>Perfil</th>
+          <th>Status</th>
+          <th>Lancamentos</th>
+          <th>Ultima interacao</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.id }}</td>
+          <td>{{ user.name }}</td>
+          <td>{{ user.email or "-" }}</td>
+          <td>{{ user.telegram_id or "-" }}</td>
+          <td>{% if user.telegram_id %}{{ user.telegram_first_name or "-" }}{% if user.telegram_username %}<br><small>@{{ user.telegram_username }}</small>{% endif %}{% else %}-{% endif %}</td>
+          <td>{{ user.role }}</td>
+          <td><em class="status {{ 'pago' if user.status == 'ativo' else 'cancelado' }}">{{ user.status }}</em></td>
+          <td>{{ user.total_transactions }}</td>
+          <td>{{ user.last_interaction_at or user.last_login_at or "-" }}</td>
+          <td class="actions-cell">
+            <a href="{{ url_for('web.admin_user_detail', user_id=user.id) }}">Detalhes</a>
+            <a href="{{ url_for('web.admin_user_edit', user_id=user.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('web.admin_user_toggle', user_id=user.id) }}">
+              <button>{{ "Desativar" if user.status == "ativo" else "Ativar" }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
