@@ -74,40 +74,116 @@
 </section>
 
 <div class="modal-backdrop" id="admin-user-modal" hidden>
-  <aside class="quick-category-panel admin-user-panel">
+  <aside class="admin-user-modal-panel">
     <div class="transaction-modal-header">
       <div class="transaction-modal-title">
-        <span class="transaction-modal-icon">+</span>
+        <span class="transaction-modal-icon">U+</span>
         <div>
           <h2>Novo usuário</h2>
-          <p>Cadastre acesso, perfil e status inicial.</p>
+          <p>Cadastre acesso, permissões, Telegram e preferências.</p>
         </div>
       </div>
       <button class="modal-close" type="button" data-modal-close>X</button>
     </div>
-    <form class="quick-category-form" data-admin-user-form>
-      <label>Nome <input name="name" required></label>
-      <label>E-mail <input type="email" name="email" required></label>
-      <label>Senha temporária <input type="password" name="password" required></label>
-      <label>Perfil
-        <select name="role">
-          <option value="user">user</option>
-          <option value="admin">admin</option>
-        </select>
-      </label>
-      <label>Status
-        <select name="status">
-          <option value="ativo">ativo</option>
-          <option value="inativo">inativo</option>
-        </select>
-      </label>
-      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_alerts" value="1"> Receber alertas pelo Telegram</label>
-      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_reports" value="1"> Receber relatórios pelo Telegram</label>
-      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_bill_reminders" value="1"> Receber lembretes de contas</label>
-      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_ai_analysis" value="1"> Receber análises da IA</label>
-      <div class="transaction-modal-actions">
+    <form class="admin-user-onboarding-form" data-admin-user-form>
+      <div class="admin-user-modal-grid">
+        <div class="admin-user-form-column">
+          <section class="admin-user-section">
+            <div class="admin-section-title"><span>1</span><h3>Dados do usuário</h3></div>
+            <div class="admin-two-fields">
+              <label>Nome completo <input name="name" placeholder="Ex.: Miguel Angelo" required></label>
+              <label>E-mail <input type="email" name="email" placeholder="Ex.: miguel@email.com" required></label>
+            </div>
+            <label>Perfil de acesso
+              <select name="role">
+                <option value="user">Usuário</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="admin-user-section">
+            <div class="admin-section-title"><span>2</span><h3>Acesso ao sistema</h3></div>
+            <div class="admin-password-grid">
+              <label>Senha temporária <input type="text" name="password" placeholder="Gere ou informe uma senha" required></label>
+              <button class="primary-button admin-generate-password" type="button" data-admin-generate-password>Gerar senha</button>
+            </div>
+            <label>Status da conta
+              <select name="status">
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </label>
+            <p class="admin-form-hint">O usuário deverá alterar a senha no primeiro acesso.</p>
+          </section>
+
+          <section class="admin-user-section">
+            <div class="admin-section-title"><span>3</span><h3>Integração Telegram</h3></div>
+            <div class="admin-telegram-grid">
+              <div class="admin-telegram-info">
+                <strong>Bot financeiro conectado ao usuário certo</strong>
+                <small>Permite receber alertas, relatórios e interagir com o sistema pelo Telegram após a vinculação.</small>
+              </div>
+              <div class="admin-code-controls">
+                <button class="primary-button" type="button" data-admin-preview-code>Gerar código</button>
+                <label>Código atual
+                  <div class="admin-code-copy">
+                    <input name="telegram_preview_code" readonly data-admin-code-field placeholder="Será gerado ao salvar">
+                    <button type="button" data-admin-copy-code>Copiar</button>
+                  </div>
+                </label>
+              </div>
+              <div>
+                <span class="telegram-badge telegram-nao_conectado" data-admin-telegram-status>Não vinculado</span>
+                <p class="admin-form-hint">Informe este código ao usuário para que ele envie no Telegram:</p>
+                <code class="admin-command-preview" data-admin-command-preview>/vincular CODIGO</code>
+              </div>
+            </div>
+            <input type="hidden" name="generate_telegram_code" value="0" data-admin-generate-code-flag>
+          </section>
+
+          <section class="admin-user-section">
+            <div class="admin-section-title"><span>4</span><h3>Preferências de notificação</h3></div>
+            <div class="admin-switch-grid">
+              <label class="switch-row compact"><input type="checkbox" name="receive_telegram_alerts" value="1" checked><i></i><span><strong>Alertas financeiros</strong><small>Riscos, vencimentos e oportunidades.</small></span></label>
+              <label class="switch-row compact"><input type="checkbox" name="receive_telegram_reports" value="1" checked><i></i><span><strong>Relatórios mensais</strong><small>Resumo financeiro por competência.</small></span></label>
+              <label class="switch-row compact"><input type="checkbox" name="receive_telegram_bill_reminders" value="1" checked><i></i><span><strong>Contas a vencer</strong><small>Lembretes de contas fixas.</small></span></label>
+              <label class="switch-row compact"><input type="checkbox" name="receive_telegram_ai_analysis" value="1" checked><i></i><span><strong>Análises da IA</strong><small>Insights e recomendações.</small></span></label>
+            </div>
+          </section>
+        </div>
+
+        <aside class="admin-user-summary-panel">
+          <div class="admin-summary-heading">
+            <span>U</span>
+            <div>
+              <h3>Resumo do usuário</h3>
+              <small>Atualizado em tempo real</small>
+            </div>
+          </div>
+          <dl class="admin-summary-list">
+            <div><dt>Nome</dt><dd data-admin-summary="name">-</dd></div>
+            <div><dt>E-mail</dt><dd data-admin-summary="email">-</dd></div>
+            <div><dt>Perfil</dt><dd data-admin-summary="role">Usuário</dd></div>
+            <div><dt>Status da conta</dt><dd><em class="status pago" data-admin-summary="status">Ativo</em></dd></div>
+            <div><dt>Senha temporária</dt><dd data-admin-summary="password">-</dd></div>
+            <div><dt>Status Telegram</dt><dd><em class="telegram-badge telegram-nao_conectado" data-admin-summary="telegram_status">Não vinculado</em></dd></div>
+            <div><dt>Código de vinculação</dt><dd data-admin-summary="telegram_code">-</dd></div>
+          </dl>
+          <div class="admin-summary-preferences">
+            <h4>Notificações</h4>
+            <p><span data-admin-pref="receive_telegram_alerts">Sim</span> Alertas financeiros</p>
+            <p><span data-admin-pref="receive_telegram_reports">Sim</span> Relatórios mensais</p>
+            <p><span data-admin-pref="receive_telegram_bill_reminders">Sim</span> Contas a vencer</p>
+            <p><span data-admin-pref="receive_telegram_ai_analysis">Sim</span> Análises da IA</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="transaction-modal-actions admin-user-actions">
         <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
-        <button class="primary-button" type="submit">Salvar usuário</button>
+        <button class="secondary-button" type="submit" data-admin-submit-mode="normal">Salvar usuário</button>
+        <button class="primary-button" type="submit" data-admin-submit-mode="telegram">Salvar e gerar código Telegram</button>
       </div>
       <p class="form-feedback" data-admin-user-feedback></p>
     </form>

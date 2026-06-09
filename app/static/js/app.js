@@ -289,6 +289,57 @@ if (adminUserForm) {
   const feedback = document.querySelector("[data-admin-user-feedback]");
   const usersBody = document.querySelector("[data-admin-users-body]");
   const adminModal = document.getElementById("admin-user-modal");
+  const codeField = adminUserForm.querySelector("[data-admin-code-field]");
+  const commandPreview = adminUserForm.querySelector("[data-admin-command-preview]");
+  const generateCodeFlag = adminUserForm.querySelector("[data-admin-generate-code-flag]");
+  const telegramStatusPreview = adminUserForm.querySelector("[data-admin-telegram-status]");
+  const summary = (key) => adminUserForm.querySelector(`[data-admin-summary="${key}"]`);
+  const pref = (key) => adminUserForm.querySelector(`[data-admin-pref="${key}"]`);
+  const displayRole = (value) => (value === "admin" ? "Admin" : "Usuário");
+  const displayStatus = (value) => (value === "inativo" ? "Inativo" : "Ativo");
+  const randomCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "GFI-";
+    for (let index = 0; index < 6; index += 1) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  };
+  const randomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    let value = "MGF-";
+    for (let index = 0; index < 8; index += 1) value += chars[Math.floor(Math.random() * chars.length)];
+    return value;
+  };
+  const setTelegramPreview = (code = "") => {
+    if (codeField) codeField.value = code;
+    if (commandPreview) commandPreview.textContent = code ? `/vincular ${code}` : "/vincular CODIGO";
+    if (telegramStatusPreview) {
+      telegramStatusPreview.textContent = code ? "Pendente" : "Não vinculado";
+      telegramStatusPreview.className = `telegram-badge ${code ? "telegram-pendente" : "telegram-nao_conectado"}`;
+    }
+    const telegramSummary = summary("telegram_status");
+    if (telegramSummary) {
+      telegramSummary.textContent = code ? "Pendente" : "Não vinculado";
+      telegramSummary.className = `telegram-badge ${code ? "telegram-pendente" : "telegram-nao_conectado"}`;
+    }
+    const codeSummary = summary("telegram_code");
+    if (codeSummary) codeSummary.textContent = code || "-";
+  };
+  const updateAdminSummary = () => {
+    const form = adminUserForm.elements;
+    if (summary("name")) summary("name").textContent = form.name?.value || "-";
+    if (summary("email")) summary("email").textContent = form.email?.value || "-";
+    if (summary("role")) summary("role").textContent = displayRole(form.role?.value);
+    if (summary("password")) summary("password").textContent = form.password?.value || "-";
+    const statusElement = summary("status");
+    if (statusElement) {
+      statusElement.textContent = displayStatus(form.status?.value);
+      statusElement.className = `status ${form.status?.value === "ativo" ? "pago" : "cancelado"}`;
+    }
+    ["receive_telegram_alerts", "receive_telegram_reports", "receive_telegram_bill_reminders", "receive_telegram_ai_analysis"].forEach((key) => {
+      const element = pref(key);
+      if (element) element.textContent = form[key]?.checked ? "Sim" : "Não";
+    });
+  };
   const userRow = (user) => `
     <tr data-user-row="${user.id}">
       <td>${user.id}</td>
@@ -309,10 +360,39 @@ if (adminUserForm) {
       </td>
     </tr>`;
 
+  adminUserForm.querySelector("[data-admin-generate-password]")?.addEventListener("click", () => {
+    adminUserForm.elements.password.value = randomPassword();
+    updateAdminSummary();
+  });
+
+  adminUserForm.querySelector("[data-admin-preview-code]")?.addEventListener("click", () => {
+    setTelegramPreview(randomCode());
+  });
+
+  adminUserForm.querySelector("[data-admin-copy-code]")?.addEventListener("click", async () => {
+    const value = codeField?.value;
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(`/vincular ${value}`);
+      feedback.textContent = "Código copiado.";
+    } catch (error) {
+      feedback.textContent = "Copie manualmente o código exibido.";
+    }
+  });
+
+  adminUserForm.addEventListener("input", updateAdminSummary);
+  adminUserForm.addEventListener("change", updateAdminSummary);
+
   adminUserForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     feedback.textContent = "";
+    const shouldGenerateCode = event.submitter?.dataset.adminSubmitMode === "telegram";
+    if (generateCodeFlag) generateCodeFlag.value = shouldGenerateCode ? "1" : "0";
     const payload = Object.fromEntries(new FormData(adminUserForm).entries());
+    payload.generate_telegram_code = shouldGenerateCode ? "1" : "0";
+    ["receive_telegram_alerts", "receive_telegram_reports", "receive_telegram_bill_reminders", "receive_telegram_ai_analysis"].forEach((key) => {
+      payload[key] = adminUserForm.elements[key]?.checked ? "1" : "0";
+    });
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -322,16 +402,24 @@ if (adminUserForm) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao criar usuário");
       if (usersBody) usersBody.insertAdjacentHTML("afterbegin", userRow(data.user));
-      feedback.textContent = "Usuário criado com sucesso.";
-      adminUserForm.reset();
-      setTimeout(() => {
-        adminModal.hidden = true;
-        feedback.textContent = "";
-      }, 700);
+      if (data.telegram_code?.code) setTelegramPreview(data.telegram_code.code);
+      feedback.textContent = shouldGenerateCode ? "Usuário criado e código Telegram gerado." : "Usuário criado com sucesso.";
+      if (!shouldGenerateCode) {
+        adminUserForm.reset();
+        setTelegramPreview("");
+        updateAdminSummary();
+        setTimeout(() => {
+          adminModal.hidden = true;
+          feedback.textContent = "";
+        }, 700);
+      }
     } catch (error) {
       feedback.textContent = error.message;
     }
   });
+
+  setTelegramPreview("");
+  updateAdminSummary();
 }
 
 const quickCategoryModal = document.getElementById("quick-category-modal");

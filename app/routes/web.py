@@ -907,7 +907,11 @@ def admin_user_create():
 @admin_required
 def api_admin_user_create():
     try:
-        user_id = admin_create_user(request.get_json(silent=True) or request.form)
+        form = request.get_json(silent=True) or request.form
+        user_id = admin_create_user(form)
+        telegram_code = None
+        if str(form.get("generate_telegram_code") or "0") in {"1", "true", "on", "sim"}:
+            telegram_code = generate_link_code(user_id)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     user = get_user(user_id)
@@ -915,7 +919,7 @@ def api_admin_user_create():
     payload = dict(user)
     payload["telegram_badge"] = telegram_badge(payload.get("telegram_status"))
     payload["total_transactions"] = 0
-    return jsonify({"user": payload}), 201
+    return jsonify({"user": payload, "telegram_code": telegram_code}), 201
 
 
 @web_bp.route("/admin/usuarios/<int:user_id>")
