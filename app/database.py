@@ -130,6 +130,15 @@ def init_db():
               telegram_id text unique,
               telegram_username text,
               telegram_first_name text,
+              telegram_status text not null default 'nao_conectado',
+              telegram_link_code text,
+              telegram_link_code_expires_at text,
+              telegram_linked_at text,
+              telegram_last_interaction text,
+              receive_telegram_alerts integer not null default 0,
+              receive_telegram_reports integer not null default 0,
+              receive_telegram_bill_reminders integer not null default 0,
+              receive_telegram_ai_analysis integer not null default 0,
               role text not null default 'user',
               status text not null default 'ativo',
               last_login_at text,
@@ -414,6 +423,15 @@ def init_db():
             "telegram_id": "alter table users add column telegram_id text",
             "telegram_username": "alter table users add column telegram_username text",
             "telegram_first_name": "alter table users add column telegram_first_name text",
+            "telegram_status": "alter table users add column telegram_status text not null default 'nao_conectado'",
+            "telegram_link_code": "alter table users add column telegram_link_code text",
+            "telegram_link_code_expires_at": "alter table users add column telegram_link_code_expires_at text",
+            "telegram_linked_at": "alter table users add column telegram_linked_at text",
+            "telegram_last_interaction": "alter table users add column telegram_last_interaction text",
+            "receive_telegram_alerts": "alter table users add column receive_telegram_alerts integer not null default 0",
+            "receive_telegram_reports": "alter table users add column receive_telegram_reports integer not null default 0",
+            "receive_telegram_bill_reminders": "alter table users add column receive_telegram_bill_reminders integer not null default 0",
+            "receive_telegram_ai_analysis": "alter table users add column receive_telegram_ai_analysis integer not null default 0",
             "role": "alter table users add column role text not null default 'user'",
             "status": "alter table users add column status text not null default 'ativo'",
             "last_login_at": "alter table users add column last_login_at text",
@@ -586,6 +604,8 @@ def init_db():
         )
         conn.execute("update users set role = 'user' where role is null or role = ''")
         conn.execute("update users set status = 'ativo' where status is null or status = ''")
+        conn.execute("update users set telegram_status = 'conectado' where telegram_id is not null and (telegram_status is null or telegram_status = '' or telegram_status = 'nao_conectado')")
+        conn.execute("update users set telegram_status = 'nao_conectado' where telegram_id is null and (telegram_status is null or telegram_status = '')")
 
         default_user = conn.execute("select id from users where email = ?", ("miguel@email.com",)).fetchone()
         if default_user:

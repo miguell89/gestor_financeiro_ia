@@ -14,6 +14,26 @@ def validate_status(status):
     return status if status in {"ativo", "inativo"} else "ativo"
 
 
+def checkbox_value(form, key):
+    return 1 if form.get(key) in {"1", "on", "true", "sim"} else 0
+
+
+def telegram_label(status):
+    return {
+        "conectado": "Conectado",
+        "pendente": "Pendente",
+        "nao_conectado": "Não conectado",
+    }.get(status or "nao_conectado", "Não conectado")
+
+
+def telegram_badge(status):
+    return {
+        "conectado": "🟢 Conectado",
+        "pendente": "🟡 Pendente",
+        "nao_conectado": "🔴 Não conectado",
+    }.get(status or "nao_conectado", "🔴 Não conectado")
+
+
 def list_users(filters):
     params = []
     clauses = []
@@ -22,8 +42,8 @@ def list_users(filters):
     status = filters.get("status")
 
     if query:
-        clauses.append("(lower(u.name) like lower(?) or lower(u.email) like lower(?) or u.telegram_id like ?)")
-        params.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        clauses.append("(lower(u.name) like lower(?) or lower(u.email) like lower(?) or u.telegram_id like ? or lower(u.telegram_username) like lower(?))")
+        params.extend([f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"])
 
     if status:
         clauses.append("u.status = ?")
@@ -33,7 +53,7 @@ def list_users(filters):
 
     with db() as conn:
         ensure_telegram_link_schema(conn)
-        return conn.execute(
+        rows = conn.execute(
             f"""
             select
               u.id,
@@ -42,20 +62,44 @@ def list_users(filters):
               u.telegram_id,
               u.telegram_username,
               u.telegram_first_name,
+              u.telegram_status,
+              u.telegram_link_code,
+              u.telegram_linked_at,
+              u.telegram_last_interaction,
               u.role,
               u.status,
               u.created_at,
               u.last_login_at,
               u.last_interaction_at,
-              count(t.id) as total_transactions
+              (select count(*) from transactions t where t.user_id = u.id) as total_transactions
             from users u
-            left join transactions t on t.user_id = u.id
             {where}
-            group by u.id
             order by u.created_at desc
             """,
             params,
         ).fetchall()
+    return [dict(row, telegram_badge=telegram_badge(row["telegram_status"])) for row in rows]
+
+
+def admin_kpis():
+    with db() as conn:
+        ensure_telegram_link_schema(conn)
+        row = conn.execute(
+            """
+            select
+              count(*) as total_users,
+              sum(case when telegram_status = 'conectado' then 1 else 0 end) as telegram_connected,
+              sum(case when telegram_status = 'pendente' then 1 else 0 end) as telegram_pending,
+              sum(case when status = 'inativo' then 1 else 0 end) as inactive_users
+            from users
+            """
+        ).fetchone()
+    return {
+        "total_users": row["total_users"] or 0,
+        "telegram_connected": row["telegram_connected"] or 0,
+        "telegram_pending": row["telegram_pending"] or 0,
+        "inactive_users": row["inactive_users"] or 0,
+    }
 
 
 def create_user(form):
@@ -63,9 +107,9 @@ def create_user(form):
     email = (form.get("email") or "").strip().lower()
     password = form.get("password") or ""
     if not name:
-        raise ValueError("Informe o nome do usuario.")
+        raise ValueError("Informe o nome do usuário.")
     if not email:
-        raise ValueError("Informe o email do usuario.")
+        raise ValueError("Informe o e-mail do usuário.")
     if not password:
         raise ValueError("Informe uma senha inicial.")
 
@@ -73,22 +117,25 @@ def create_user(form):
         ensure_telegram_link_schema(conn)
         existing = conn.execute("select id from users where lower(email) = lower(?)", (email,)).fetchone()
         if existing:
-            raise ValueError("Ja existe um usuario com esse email.")
+            raise ValueError("Já existe um usuário com esse e-mail.")
         cursor = conn.execute(
             """
             insert into users
-              (name, email, password_hash, telegram_id, telegram_username, telegram_first_name, role, status, assistant_tone)
-            values (?, ?, ?, ?, ?, ?, ?, ?, 'divertido')
+              (name, email, password_hash, role, status, assistant_tone,
+               telegram_status, receive_telegram_alerts, receive_telegram_reports,
+               receive_telegram_bill_reminders, receive_telegram_ai_analysis)
+            values (?, ?, ?, ?, ?, 'divertido', 'nao_conectado', ?, ?, ?, ?)
             """,
             (
                 name,
                 email,
                 generate_password_hash(password),
-                form.get("telegram_id") or None,
-                form.get("telegram_username") or None,
-                form.get("telegram_first_name") or None,
                 validate_role(form.get("role")),
                 validate_status(form.get("status")),
+                checkbox_value(form, "receive_telegram_alerts"),
+                checkbox_value(form, "receive_telegram_reports"),
+                checkbox_value(form, "receive_telegram_bill_reminders"),
+                checkbox_value(form, "receive_telegram_ai_analysis"),
             ),
         )
         return cursor.lastrowid
@@ -103,28 +150,33 @@ def get_user(user_id):
 def update_user(user_id, form):
     email = (form.get("email") or "").strip().lower()
     if not (form.get("name") or "").strip():
-        raise ValueError("Informe o nome do usuario.")
+        raise ValueError("Informe o nome do usuário.")
     if not email:
-        raise ValueError("Informe o email do usuario.")
+        raise ValueError("Informe o e-mail do usuário.")
     with db() as conn:
         ensure_telegram_link_schema(conn)
         duplicate = conn.execute("select id from users where lower(email) = lower(?) and id != ?", (email, user_id)).fetchone()
         if duplicate:
-            raise ValueError("Ja existe outro usuario com esse email.")
+            raise ValueError("Já existe outro usuário com esse e-mail.")
         conn.execute(
             """
             update users
-            set name = ?, email = ?, telegram_id = ?, telegram_username = ?, telegram_first_name = ?, role = ?, status = ?
+            set name = ?, email = ?, role = ?, status = ?,
+                receive_telegram_alerts = ?,
+                receive_telegram_reports = ?,
+                receive_telegram_bill_reminders = ?,
+                receive_telegram_ai_analysis = ?
             where id = ?
             """,
             (
                 form.get("name"),
                 email,
-                form.get("telegram_id") or None,
-                form.get("telegram_username") or None,
-                form.get("telegram_first_name") or None,
                 validate_role(form.get("role")),
                 validate_status(form.get("status")),
+                checkbox_value(form, "receive_telegram_alerts"),
+                checkbox_value(form, "receive_telegram_reports"),
+                checkbox_value(form, "receive_telegram_bill_reminders"),
+                checkbox_value(form, "receive_telegram_ai_analysis"),
                 user_id,
             ),
         )
@@ -181,6 +233,7 @@ def user_details(user_id):
 
     return {
         "user": user,
+        "telegram_badge": telegram_badge(user["telegram_status"] if user else "nao_conectado"),
         "summary": get_dashboard_data(user_id),
         "transactions": transactions,
         "bills": bills,

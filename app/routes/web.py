@@ -9,7 +9,7 @@ from flask import Blueprint, Response, current_app, jsonify, redirect, render_te
 from werkzeug.utils import secure_filename
 
 from app.models import ORIGINS, PAYMENT_METHODS, TRANSACTION_STATUS, TRANSACTION_TYPES
-from app.services.admin_service import create_user as admin_create_user, get_user, list_users, toggle_user_status, update_user, user_details
+from app.services.admin_service import admin_kpis, create_user as admin_create_user, get_user, list_users, telegram_badge, toggle_user_status, update_user, user_details
 from app.services.auth_service import admin_required, authenticate, current_user_id, is_admin, login_required
 from app.services.finance_service import (
     create_financial_attachment,
@@ -886,7 +886,7 @@ def assistente():
 @web_bp.route("/admin/usuarios")
 @admin_required
 def admin_users():
-    return render_template("admin_users.html", users=list_users(request.args), filters=request.args)
+    return render_template("admin_users.html", users=list_users(request.args), filters=request.args, kpis=admin_kpis())
 
 
 @web_bp.route("/admin/usuarios/novo", methods=["GET", "POST"])
@@ -903,10 +903,45 @@ def admin_user_create():
     return render_template("admin_user_form.html", user=None, error=error, mode="create")
 
 
+@web_bp.route("/api/admin/users", methods=["POST"])
+@admin_required
+def api_admin_user_create():
+    try:
+        user_id = admin_create_user(request.get_json(silent=True) or request.form)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    user = get_user(user_id)
+    create_log("info", "admin", "user_created", "Usuario criado pelo admin", user_id=current_user_id(), details={"created_user_id": user_id})
+    payload = dict(user)
+    payload["telegram_badge"] = telegram_badge(payload.get("telegram_status"))
+    payload["total_transactions"] = 0
+    return jsonify({"user": payload}), 201
+
+
 @web_bp.route("/admin/usuarios/<int:user_id>")
 @admin_required
 def admin_user_detail(user_id):
     return render_template("admin_user_detail.html", details=user_details(user_id))
+
+
+@web_bp.route("/admin/usuarios/<int:user_id>/telegram/gerar-codigo", methods=["POST"])
+@admin_required
+def admin_user_telegram_generate(user_id):
+    if not get_user(user_id):
+        return redirect(url_for("web.admin_users"))
+    code = generate_link_code(user_id)
+    create_log("info", "admin", "telegram_link_code_generated", "Codigo Telegram gerado pelo admin", user_id=current_user_id(), details={"target_user_id": user_id, "expires_at": code["expires_at"]})
+    return redirect(url_for("web.admin_user_detail", user_id=user_id))
+
+
+@web_bp.route("/admin/usuarios/<int:user_id>/telegram/desvincular", methods=["POST"])
+@admin_required
+def admin_user_telegram_unlink(user_id):
+    if not get_user(user_id):
+        return redirect(url_for("web.admin_users"))
+    unlink_telegram_account(user_id)
+    create_log("info", "admin", "telegram_unlinked", "Telegram desvinculado pelo admin", user_id=current_user_id(), details={"target_user_id": user_id})
+    return redirect(url_for("web.admin_user_detail", user_id=user_id))
 
 
 @web_bp.route("/admin/usuarios/<int:user_id>/editar", methods=["GET", "POST"])

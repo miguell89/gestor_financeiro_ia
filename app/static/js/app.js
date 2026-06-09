@@ -283,6 +283,57 @@ document.querySelectorAll("[data-modal-close], .modal-backdrop").forEach((elemen
   });
 });
 
+const adminUserForm = document.querySelector("[data-admin-user-form]");
+
+if (adminUserForm) {
+  const feedback = document.querySelector("[data-admin-user-feedback]");
+  const usersBody = document.querySelector("[data-admin-users-body]");
+  const adminModal = document.getElementById("admin-user-modal");
+  const userRow = (user) => `
+    <tr data-user-row="${user.id}">
+      <td>${user.id}</td>
+      <td>${user.name || "-"}</td>
+      <td>${user.email || "-"}</td>
+      <td><em class="telegram-badge telegram-${user.telegram_status || "nao_conectado"}">${user.telegram_badge || "🔴 Não conectado"}</em></td>
+      <td>${user.telegram_username ? `@${user.telegram_username}` : "-"}</td>
+      <td><em class="status ${user.status === "ativo" ? "pago" : "cancelado"}">${user.status}</em></td>
+      <td>${user.role}</td>
+      <td>0</td>
+      <td>${user.telegram_last_interaction || user.last_interaction_at || user.last_login_at || "-"}</td>
+      <td class="actions-cell">
+        <a href="/admin/usuarios/${user.id}">Detalhes</a>
+        <a href="/admin/usuarios/${user.id}/editar">Editar</a>
+        <form method="post" action="/admin/usuarios/${user.id}/toggle">
+          <button>${user.status === "ativo" ? "Desativar" : "Ativar"}</button>
+        </form>
+      </td>
+    </tr>`;
+
+  adminUserForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    feedback.textContent = "";
+    const payload = Object.fromEntries(new FormData(adminUserForm).entries());
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Erro ao criar usuário");
+      if (usersBody) usersBody.insertAdjacentHTML("afterbegin", userRow(data.user));
+      feedback.textContent = "Usuário criado com sucesso.";
+      adminUserForm.reset();
+      setTimeout(() => {
+        adminModal.hidden = true;
+        feedback.textContent = "";
+      }, 700);
+    } catch (error) {
+      feedback.textContent = error.message;
+    }
+  });
+}
+
 const quickCategoryModal = document.getElementById("quick-category-modal");
 const quickCategoryForm = document.querySelector("[data-quick-category-form]");
 let quickCategoryTarget = null;

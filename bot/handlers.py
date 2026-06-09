@@ -36,6 +36,12 @@ class TelegramNotLinked(Exception):
     pass
 
 
+def initialize_runtime_db():
+    init_db()
+    if settings.SEED_DEMO_DATA:
+        seed_db()
+
+
 def ensure_telegram_user(telegram_id, first_name=None):
     if not telegram_id:
         return 1
@@ -46,13 +52,28 @@ def ensure_telegram_user(telegram_id, first_name=None):
 
 
 def process_link_command(code, telegram_user):
-    init_db()
-    seed_db()
+    initialize_runtime_db()
     if not telegram_user:
         return "Nao consegui identificar sua conta do Telegram."
+    create_log(
+        "info",
+        "telegram",
+        "link_command_processing",
+        "Processando /vincular antes de validar usuario vinculado",
+        telegram_id=str(telegram_user.id),
+        details={"code": (code or "").strip().upper()},
+    )
     try:
         result = link_telegram_account(code, telegram_user)
     except ValueError as exc:
+        create_log(
+            "warning",
+            "telegram",
+            "link_command_error",
+            str(exc),
+            telegram_id=str(telegram_user.id),
+            details={"code": (code or "").strip().upper()},
+        )
         return str(exc)
     create_log(
         "info",
@@ -63,7 +84,7 @@ def process_link_command(code, telegram_user):
         telegram_id=str(telegram_user.id),
         details={"username": getattr(telegram_user, "username", None), "first_name": getattr(telegram_user, "first_name", None)},
     )
-    return f"Telegram vinculado com sucesso para {result['name']}. Agora seus comandos financeiros usam somente seus dados."
+    return "✅ Conta vinculada com sucesso ao Meu Gestor Financeiro IA."
 
 
 def find_category_id(conn, name):
@@ -235,8 +256,7 @@ def largest_expenses_answer(report_data):
 def process_report_command(text, telegram_user=None):
     if not is_report_request(text):
         return None
-    init_db()
-    seed_db()
+    initialize_runtime_db()
     telegram_id = str(telegram_user.id) if telegram_user else None
     user_id = ensure_telegram_user(telegram_id, telegram_user.first_name if telegram_user else None) if telegram_id else 1
     month, year = parse_report_period(text)
@@ -264,8 +284,7 @@ def is_goal_request(text):
 def process_goal_command(text, telegram_user=None):
     if not is_goal_request(text):
         return None
-    init_db()
-    seed_db()
+    initialize_runtime_db()
     telegram_id = str(telegram_user.id) if telegram_user else None
     user_id = ensure_telegram_user(telegram_id, telegram_user.first_name if telegram_user else None) if telegram_id else 1
     normalized = normalize_report_text(text)
@@ -368,8 +387,7 @@ def attach_receipt_file_to_transaction(file_path, user_id, transaction_id, recei
 
 
 def process_text_message(text, telegram_user=None):
-    init_db()
-    seed_db()
+    initialize_runtime_db()
     telegram_id = str(telegram_user.id) if telegram_user else None
     first_name = telegram_user.first_name if telegram_user else None
     user_id = ensure_telegram_user(telegram_id, first_name) if telegram_id else 1
@@ -454,8 +472,7 @@ def format_receipt_confirmation(data):
 
 
 def process_receipt_photo(file_path, telegram_user=None):
-    init_db()
-    seed_db()
+    initialize_runtime_db()
     telegram_id = str(telegram_user.id) if telegram_user else None
     user_id = ensure_telegram_user(telegram_id, telegram_user.first_name if telegram_user else None) if telegram_id else 1
     data = ler_comprovante(file_path)

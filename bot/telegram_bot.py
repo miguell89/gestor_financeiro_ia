@@ -33,19 +33,55 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def vincular(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("Comando /vincular recebido de user_id=%s", update.effective_user.id if update.effective_user else None)
+    logger.info("Comando /vincular recebido de user_id=%s args=%s", update.effective_user.id if update.effective_user else None, context.args)
     if not is_allowed(update):
         await update.message.reply_text("Este bot esta restrito ao usuario autorizado.")
+        logger.info("Resposta enviada para /vincular: usuario nao autorizado")
         return
 
-    code = context.args[0] if context.args else ""
-    await update.message.reply_text(process_link_command(code, update.effective_user))
+    try:
+        code = context.args[0].strip() if context.args else ""
+        logger.info("Codigo recebido no /vincular. telegram_id=%s codigo=%s", update.effective_user.id if update.effective_user else None, code)
+        if not code:
+            await update.message.reply_text("Envie assim: /vincular SEU_CODIGO")
+            logger.info("Resposta enviada para /vincular sem codigo")
+            return
+        answer = process_link_command(code, update.effective_user)
+        await update.message.reply_text(answer)
+        logger.info("Resposta enviada para /vincular. telegram_id=%s resposta=%s", update.effective_user.id if update.effective_user else None, answer)
+    except Exception as error:
+        logger.exception("Erro detalhado no /vincular. telegram_id=%s", update.effective_user.id if update.effective_user else None)
+        await update.message.reply_text("Não consegui vincular agora. Tente novamente em instantes.")
+        logger.info("Resposta enviada para erro interno do /vincular: %s", error)
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Mensagem recebida de user_id=%s: %s", update.effective_user.id if update.effective_user else None, update.message.text)
     if not is_allowed(update):
         await update.message.reply_text("Este bot esta restrito ao usuario autorizado.")
+        return
+
+    text = update.message.text or ""
+    if text.strip().lower().startswith("/vincular"):
+        parts = text.strip().split(maxsplit=1)
+        code = parts[1].strip() if len(parts) > 1 else ""
+        logger.info(
+            "Comando /vincular identificado no handle_text. telegram_id=%s codigo=%s",
+            update.effective_user.id if update.effective_user else None,
+            code,
+        )
+        if not code:
+            await update.message.reply_text("Envie assim: /vincular SEU_CODIGO")
+            logger.info("Resposta enviada para /vincular sem codigo no handle_text")
+            return
+        try:
+            answer = process_link_command(code, update.effective_user)
+            await update.message.reply_text(answer)
+            logger.info("Resposta enviada para /vincular no handle_text. telegram_id=%s resposta=%s", update.effective_user.id if update.effective_user else None, answer)
+        except Exception as error:
+            logger.exception("Erro detalhado no /vincular via handle_text. telegram_id=%s", update.effective_user.id if update.effective_user else None)
+            await update.message.reply_text("Não consegui vincular agora. Tente novamente em instantes.")
+            logger.info("Resposta enviada para erro interno do /vincular via handle_text: %s", error)
         return
 
     try:
@@ -190,16 +226,19 @@ def main():
     if settings.TELEGRAM_MODE != "polling":
         raise RuntimeError("TELEGRAM_MODE=webhook ainda nao esta habilitado. Use TELEGRAM_MODE=polling para o MVP no Render.")
 
+    logger.info("TELEGRAM_BOT_TOKEN carregado=%s mascara=%s", bool(settings.TELEGRAM_BOT_TOKEN), f"{settings.TELEGRAM_BOT_TOKEN[:6]}...{settings.TELEGRAM_BOT_TOKEN[-4:]}" if settings.TELEGRAM_BOT_TOKEN else "")
+    logger.info("TELEGRAM_MODE=%s. Iniciando polling.", settings.TELEGRAM_MODE)
     app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("vincular", vincular))
+    logger.info("Handler registrado: CommandHandler('vincular', vincular)")
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_error_handler(handle_error)
-    logger.info("Bot iniciado. Username deve aparecer no Telegram como @GestorBott_bot")
-    app.run_polling()
+    logger.info("Bot iniciado. Limpando webhook e iniciando polling.")
+    app.run_polling(drop_pending_updates=False, allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":

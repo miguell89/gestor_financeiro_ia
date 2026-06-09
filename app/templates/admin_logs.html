@@ -5,11 +5,11 @@
 <section class="panel">
   <div class="panel-heading">
     <h2>Logs</h2>
-    <a href="{{ url_for('web.admin_users') }}">Usuarios</a>
+    <a href="{{ url_for('web.admin_users') }}">Usuários</a>
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Data</th><th>Nivel</th><th>Origem</th><th>Usuario</th><th>Telegram ID</th><th>Acao</th><th>Mensagem</th></tr></thead>
+      <thead><tr><th>Data</th><th>Nível</th><th>Origem</th><th>Usuário</th><th>Telegram ID</th><th>Ação</th><th>Mensagem</th></tr></thead>
       <tbody>
         {% for log in logs %}
         <tr>

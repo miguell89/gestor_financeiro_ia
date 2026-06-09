@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% set page_title = "Novo usuario" if mode == "create" else "Editar usuario" %}
+{% set page_title = "Novo usuário" if mode == "create" else "Editar usuário" %}
 
 {% block content %}
 <form class="panel form-panel admin-edit-form" method="post">
   <div class="panel-heading">
-    <h2>{{ "Criar usuario" if mode == "create" else user.name }}</h2>
+    <h2>{{ "Criar usuário" if mode == "create" else user.name }}</h2>
     <a href="{{ url_for('web.admin_users') }}">Voltar</a>
   </div>
 
@@ -14,9 +14,6 @@
 
   <label>Nome <input name="name" value="{{ user.name if user else '' }}" required></label>
   <label>Email <input type="email" name="email" value="{{ user.email if user else '' }}" required></label>
-  <label>Telegram ID <input name="telegram_id" value="{{ user.telegram_id if user and user.telegram_id else '' }}"></label>
-  <label>Telegram username <input name="telegram_username" value="{{ user.telegram_username if user and user.telegram_username else '' }}"></label>
-  <label>Telegram nome <input name="telegram_first_name" value="{{ user.telegram_first_name if user and user.telegram_first_name else '' }}"></label>
   <label>Perfil
     <select name="role">
       <option value="user" {% if not user or user.role == 'user' %}selected{% endif %}>user</option>
@@ -30,8 +27,12 @@
     </select>
   </label>
   <label>{{ "Senha inicial" if mode == "create" else "Nova senha" }}
-    <input type="password" name="password" placeholder="{{ 'Obrigatoria para novo usuario' if mode == 'create' else 'Deixe vazio para manter' }}" {% if mode == "create" %}required{% endif %}>
+    <input type="password" name="password" placeholder="{{ 'Obrigatória para novo usuário' if mode == 'create' else 'Deixe vazio para manter' }}" {% if mode == "create" %}required{% endif %}>
   </label>
-  <button class="primary-button">{{ "Criar usuario" if mode == "create" else "Salvar alteracoes" }}</button>
+  <label class="checkbox-row"><input type="checkbox" name="receive_telegram_alerts" value="1" {% if user and user.receive_telegram_alerts %}checked{% endif %}> Receber alertas pelo Telegram</label>
+  <label class="checkbox-row"><input type="checkbox" name="receive_telegram_reports" value="1" {% if user and user.receive_telegram_reports %}checked{% endif %}> Receber relatórios pelo Telegram</label>
+  <label class="checkbox-row"><input type="checkbox" name="receive_telegram_bill_reminders" value="1" {% if user and user.receive_telegram_bill_reminders %}checked{% endif %}> Receber lembretes de contas</label>
+  <label class="checkbox-row"><input type="checkbox" name="receive_telegram_ai_analysis" value="1" {% if user and user.receive_telegram_ai_analysis %}checked{% endif %}> Receber análises da IA</label>
+  <button class="primary-button">{{ "Criar usuário" if mode == "create" else "Salvar alterações" }}</button>
 </form>
 {% endblock %}

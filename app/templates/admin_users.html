@@ -1,14 +1,18 @@
 {% extends "base.html" %}
-{% set page_title = "Administracao" %}
+{% set page_title = "Administração" %}
 
 {% block content %}
+<section class="metrics-grid admin-kpi-grid">
+  <article class="metric-card"><span>Usuários totais</span><strong>{{ kpis.total_users }}</strong><small>cadastrados no sistema</small></article>
+  <article class="metric-card glow-green"><span>Telegram conectado</span><strong>{{ kpis.telegram_connected }}</strong><small>usuários vinculados</small></article>
+  <article class="metric-card glow-purple"><span>Telegram pendente</span><strong>{{ kpis.telegram_pending }}</strong><small>aguardando código</small></article>
+  <article class="metric-card"><span>Usuários inativos</span><strong>{{ kpis.inactive_users }}</strong><small>sem acesso ativo</small></article>
+</section>
+
 <section class="panel">
   <div class="panel-heading">
-    <h2>Usuarios</h2>
-    <div class="panel-actions">
-      <a href="{{ url_for('web.admin_user_create') }}">Novo usuario</a>
-      <a href="{{ url_for('web.admin_logs') }}">Logs do sistema</a>
-    </div>
+    <h2>Usuários</h2>
+    <a href="{{ url_for('web.admin_logs') }}">Logs do sistema</a>
   </div>
 
   <form class="admin-filter" method="get">
@@ -21,6 +25,12 @@
     <button class="primary-button">Filtrar</button>
   </form>
 
+  <div class="admin-table-toolbar">
+    <button class="admin-new-user-button modal-open" type="button" data-modal-target="admin-user-modal">
+      <span>+</span> Novo usuário
+    </button>
+  </div>
+
   <div class="table-wrap">
     <table>
       <thead>
@@ -28,27 +38,27 @@
           <th>ID</th>
           <th>Nome</th>
           <th>Email</th>
-          <th>Telegram ID</th>
           <th>Telegram</th>
-          <th>Perfil</th>
+          <th>Username</th>
           <th>Status</th>
-          <th>Lancamentos</th>
-          <th>Ultima interacao</th>
-          <th>Acoes</th>
+          <th>Perfil</th>
+          <th>Lançamentos</th>
+          <th>Última interação</th>
+          <th>Ações</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody data-admin-users-body>
         {% for user in users %}
-        <tr>
+        <tr data-user-row="{{ user.id }}">
           <td>{{ user.id }}</td>
           <td>{{ user.name }}</td>
           <td>{{ user.email or "-" }}</td>
-          <td>{{ user.telegram_id or "-" }}</td>
-          <td>{% if user.telegram_id %}{{ user.telegram_first_name or "-" }}{% if user.telegram_username %}<br><small>@{{ user.telegram_username }}</small>{% endif %}{% else %}-{% endif %}</td>
-          <td>{{ user.role }}</td>
+          <td><em class="telegram-badge telegram-{{ user.telegram_status or 'nao_conectado' }}">{{ user.telegram_badge }}</em></td>
+          <td>{{ "@" ~ user.telegram_username if user.telegram_username else "-" }}</td>
           <td><em class="status {{ 'pago' if user.status == 'ativo' else 'cancelado' }}">{{ user.status }}</em></td>
+          <td>{{ user.role }}</td>
           <td>{{ user.total_transactions }}</td>
-          <td>{{ user.last_interaction_at or user.last_login_at or "-" }}</td>
+          <td>{{ user.telegram_last_interaction or user.last_interaction_at or user.last_login_at or "-" }}</td>
           <td class="actions-cell">
             <a href="{{ url_for('web.admin_user_detail', user_id=user.id) }}">Detalhes</a>
             <a href="{{ url_for('web.admin_user_edit', user_id=user.id) }}">Editar</a>
@@ -62,4 +72,45 @@
     </table>
   </div>
 </section>
+
+<div class="modal-backdrop" id="admin-user-modal" hidden>
+  <aside class="quick-category-panel admin-user-panel">
+    <div class="transaction-modal-header">
+      <div class="transaction-modal-title">
+        <span class="transaction-modal-icon">+</span>
+        <div>
+          <h2>Novo usuário</h2>
+          <p>Cadastre acesso, perfil e status inicial.</p>
+        </div>
+      </div>
+      <button class="modal-close" type="button" data-modal-close>X</button>
+    </div>
+    <form class="quick-category-form" data-admin-user-form>
+      <label>Nome <input name="name" required></label>
+      <label>E-mail <input type="email" name="email" required></label>
+      <label>Senha temporária <input type="password" name="password" required></label>
+      <label>Perfil
+        <select name="role">
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+      </label>
+      <label>Status
+        <select name="status">
+          <option value="ativo">ativo</option>
+          <option value="inativo">inativo</option>
+        </select>
+      </label>
+      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_alerts" value="1"> Receber alertas pelo Telegram</label>
+      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_reports" value="1"> Receber relatórios pelo Telegram</label>
+      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_bill_reminders" value="1"> Receber lembretes de contas</label>
+      <label class="checkbox-row"><input type="checkbox" name="receive_telegram_ai_analysis" value="1"> Receber análises da IA</label>
+      <div class="transaction-modal-actions">
+        <button class="secondary-button" type="button" data-modal-close>Cancelar</button>
+        <button class="primary-button" type="submit">Salvar usuário</button>
+      </div>
+      <p class="form-feedback" data-admin-user-feedback></p>
+    </form>
+  </aside>
+</div>
 {% endblock %}

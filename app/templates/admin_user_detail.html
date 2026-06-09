@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% set page_title = "Detalhes do usuario" %}
+{% set page_title = "Detalhes do usuário" %}
 
 {% block content %}
 <section class="metrics-grid">
-  <article class="metric-card"><span>Usuario</span><strong>{{ details.user.name }}</strong><small>{{ details.user.email or "-" }}</small></article>
+  <article class="metric-card"><span>Usuário</span><strong>{{ details.user.name }}</strong><small>{{ details.user.email or "-" }}</small></article>
   <article class="metric-card"><span>Saldo atual</span><strong>{{ details.summary.saldo_atual|brl }}</strong><small>dados separados</small></article>
   <article class="metric-card"><span>Receitas</span><strong>{{ details.summary.receitas|brl }}</strong><small>mes atual</small></article>
   <article class="metric-card"><span>Despesas</span><strong>{{ details.summary.despesas|brl }}</strong><small>mes atual</small></article>
@@ -15,16 +15,51 @@
       <h2>Dados cadastrais</h2>
       <a href="{{ url_for('web.admin_user_edit', user_id=details.user.id) }}">Editar</a>
     </div>
-    <a class="primary-button" href="{{ url_for('web.dashboard', user_id=details.user.id) }}">Abrir Dashboard deste usuario</a>
+    <a class="primary-button" href="{{ url_for('web.dashboard', user_id=details.user.id) }}">Abrir Dashboard deste usuário</a>
     <div class="info-list">
       <p><strong>ID:</strong> {{ details.user.id }}</p>
       <p><strong>Telegram ID:</strong> {{ details.user.telegram_id or "-" }}</p>
       <p><strong>Telegram username:</strong> {{ "@" ~ details.user.telegram_username if details.user.telegram_username else "-" }}</p>
       <p><strong>Telegram nome:</strong> {{ details.user.telegram_first_name or "-" }}</p>
+      <p><strong>Status Telegram:</strong> {{ details.telegram_badge }}</p>
+      <p><strong>Vinculado em:</strong> {{ details.user.telegram_linked_at or "-" }}</p>
+      <p><strong>Última interação:</strong> {{ details.user.telegram_last_interaction or details.user.last_interaction_at or "-" }}</p>
       <p><strong>Perfil:</strong> {{ details.user.role }}</p>
       <p><strong>Status:</strong> {{ details.user.status }}</p>
       <p><strong>Criado em:</strong> {{ details.user.created_at }}</p>
     </div>
+  </article>
+
+  <article class="panel telegram-admin-panel">
+    <div class="panel-heading">
+      <h2>Vincular Telegram</h2>
+    </div>
+    {% if details.user.telegram_status == "conectado" %}
+      <div class="telegram-status-card linked">
+        <span>Conectado</span>
+        <strong>{{ "@" ~ details.user.telegram_username if details.user.telegram_username else details.user.telegram_id }}</strong>
+        <small>Conta vinculada ao bot do Meu Gestor Financeiro IA.</small>
+      </div>
+      <form method="post" action="{{ url_for('web.admin_user_telegram_unlink', user_id=details.user.id) }}" class="inline-action-form">
+        <button class="secondary-button danger-button" type="submit">Desvincular Telegram</button>
+      </form>
+    {% else %}
+      {% if details.user.telegram_link_code %}
+      <div class="telegram-code-box">
+        <span>Código de vinculação</span>
+        <strong>{{ details.user.telegram_link_code }}</strong>
+        <small>Expira em {{ details.user.telegram_link_code_expires_at or "-" }}</small>
+      </div>
+      <div class="telegram-instructions">
+        <span>Instrução para o usuário</span>
+        <small>Abra o bot no Telegram e envie:</small>
+        <code>/vincular {{ details.user.telegram_link_code }}</code>
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('web.admin_user_telegram_generate', user_id=details.user.id) }}" class="inline-action-form">
+        <button class="primary-button" type="submit">{{ "Gerar novo código" if details.user.telegram_link_code else "Vincular Telegram" }}</button>
+      </form>
+    {% endif %}
   </article>
 
   <article class="panel">
