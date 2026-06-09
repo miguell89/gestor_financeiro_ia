@@ -5,7 +5,10 @@
 <section class="panel">
   <div class="panel-heading">
     <h2>Usuarios</h2>
-    <a href="{{ url_for('web.admin_logs') }}">Logs do sistema</a>
+    <div class="panel-actions">
+      <a href="{{ url_for('web.admin_user_create') }}">Novo usuario</a>
+      <a href="{{ url_for('web.admin_logs') }}">Logs do sistema</a>
+    </div>
   </div>
 
   <form class="admin-filter" method="get">

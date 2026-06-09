@@ -9,7 +9,7 @@ from flask import Blueprint, Response, current_app, jsonify, redirect, render_te
 from werkzeug.utils import secure_filename
 
 from app.models import ORIGINS, PAYMENT_METHODS, TRANSACTION_STATUS, TRANSACTION_TYPES
-from app.services.admin_service import get_user, list_users, toggle_user_status, update_user, user_details
+from app.services.admin_service import create_user as admin_create_user, get_user, list_users, toggle_user_status, update_user, user_details
 from app.services.auth_service import admin_required, authenticate, current_user_id, is_admin, login_required
 from app.services.finance_service import (
     create_financial_attachment,
@@ -266,6 +266,7 @@ def brl(value):
 
 
 @web_bp.route("/")
+@web_bp.route("/dashboard")
 @login_required
 def dashboard():
     requested_user_id = request.args.get("user_id", type=int) or current_user_id()
@@ -304,7 +305,9 @@ def login():
     if request.method == "POST":
         user = authenticate(request.form.get("email", ""), request.form.get("password", ""))
         if user:
+            session.clear()
             session["user"] = user
+            session.permanent = True
             return redirect(url_for("web.dashboard"))
 
         error = "Email ou senha invalidos."
@@ -886,6 +889,20 @@ def admin_users():
     return render_template("admin_users.html", users=list_users(request.args), filters=request.args)
 
 
+@web_bp.route("/admin/usuarios/novo", methods=["GET", "POST"])
+@admin_required
+def admin_user_create():
+    error = None
+    if request.method == "POST":
+        try:
+            user_id = admin_create_user(request.form)
+            create_log("info", "admin", "user_created", "Usuario criado pelo admin", user_id=current_user_id(), details={"created_user_id": user_id})
+            return redirect(url_for("web.admin_user_detail", user_id=user_id))
+        except ValueError as exc:
+            error = str(exc)
+    return render_template("admin_user_form.html", user=None, error=error, mode="create")
+
+
 @web_bp.route("/admin/usuarios/<int:user_id>")
 @admin_required
 def admin_user_detail(user_id):
@@ -896,10 +913,17 @@ def admin_user_detail(user_id):
 @admin_required
 def admin_user_edit(user_id):
     user = get_user(user_id)
+    if not user:
+        return redirect(url_for("web.admin_users"))
+    error = None
     if request.method == "POST":
-        update_user(user_id, request.form)
-        return redirect(url_for("web.admin_user_detail", user_id=user_id))
-    return render_template("admin_user_edit.html", user=user)
+        try:
+            update_user(user_id, request.form)
+            create_log("info", "admin", "user_updated", "Usuario atualizado pelo admin", user_id=current_user_id(), details={"updated_user_id": user_id})
+            return redirect(url_for("web.admin_user_detail", user_id=user_id))
+        except ValueError as exc:
+            error = str(exc)
+    return render_template("admin_user_form.html", user=user, error=error, mode="edit")
 
 
 @web_bp.route("/admin/usuarios/<int:user_id>/toggle", methods=["POST"])

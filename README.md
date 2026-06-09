@@ -21,30 +21,30 @@ http://localhost:5000
 
 ## Login
 
-Usuario comum demo:
+A tela de login fica em:
 
 ```text
-Email: miguel@email.com
-Senha: 123456
+/login
 ```
 
-Administrador inicial:
+Depois do login bem-sucedido, o sistema redireciona para:
 
 ```text
-Email: admin@gestor.local
-Senha: admin123
+/dashboard
 ```
 
-Voce pode alterar os dados do admin no `.env`:
+O administrador inicial e criado automaticamente no startup se ainda nao existir nenhum usuario com `role = admin`.
+
+Configure no `.env` ou no Render:
 
 ```env
 ADMIN_NAME=Administrador
 ADMIN_EMAIL=admin@gestor.local
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=senha_forte
 ADMIN_TELEGRAM_ID=
 ```
 
-Se nao existir admin, ele e criado automaticamente no startup.
+As senhas sao salvas com hash usando Werkzeug. Nunca salve senha em texto puro no banco.
 
 ## Bot Telegram
 
@@ -104,11 +104,55 @@ Administracao
 Telas disponiveis:
 
 - Usuarios
+- Criacao de usuarios
 - Detalhes do usuario
-- Edicao de dados/status/perfil/senha
+- Edicao de dados, status, perfil e senha
+- Ativar/desativar usuario
+- Redefinir senha
 - Logs do sistema
 
 Somente usuarios com `role = admin` acessam essas telas.
+
+Perfis disponiveis:
+
+- `admin`: acessa painel administrativo, usuarios e logs.
+- `user`: acessa apenas seus proprios dados financeiros.
+
+Para criar usuarios:
+
+1. Entre como admin.
+2. Acesse `Administracao`.
+3. Clique em `Novo usuario`.
+4. Informe nome, email, senha inicial, perfil e status.
+
+Para redefinir senha pelo sistema:
+
+1. Entre como admin.
+2. Acesse `Administracao`.
+3. Clique em `Editar` no usuario.
+4. Preencha `Nova senha`.
+5. Salve.
+
+Recuperacao manual de senha local, se necessario:
+
+```powershell
+@'
+from werkzeug.security import generate_password_hash
+from app.database import init_db, get_connection
+
+email = "admin@gestor.local"
+nova_senha = "troque-esta-senha"
+
+init_db()
+conn = get_connection()
+conn.execute(
+    "update users set password_hash = ?, status = 'ativo' where lower(email) = lower(?)",
+    (generate_password_hash(nova_senha), email),
+)
+conn.commit()
+conn.close()
+'@ | .\.venv\Scripts\python.exe -
+```
 
 ## Gemini
 

@@ -6,6 +6,14 @@ from app.services.log_service import list_logs
 from app.services.telegram_link_service import ensure_telegram_link_schema
 
 
+def validate_role(role):
+    return role if role in {"admin", "user"} else "user"
+
+
+def validate_status(status):
+    return status if status in {"ativo", "inativo"} else "ativo"
+
+
 def list_users(filters):
     params = []
     clauses = []
@@ -50,6 +58,42 @@ def list_users(filters):
         ).fetchall()
 
 
+def create_user(form):
+    name = (form.get("name") or "").strip()
+    email = (form.get("email") or "").strip().lower()
+    password = form.get("password") or ""
+    if not name:
+        raise ValueError("Informe o nome do usuario.")
+    if not email:
+        raise ValueError("Informe o email do usuario.")
+    if not password:
+        raise ValueError("Informe uma senha inicial.")
+
+    with db() as conn:
+        ensure_telegram_link_schema(conn)
+        existing = conn.execute("select id from users where lower(email) = lower(?)", (email,)).fetchone()
+        if existing:
+            raise ValueError("Ja existe um usuario com esse email.")
+        cursor = conn.execute(
+            """
+            insert into users
+              (name, email, password_hash, telegram_id, telegram_username, telegram_first_name, role, status, assistant_tone)
+            values (?, ?, ?, ?, ?, ?, ?, ?, 'divertido')
+            """,
+            (
+                name,
+                email,
+                generate_password_hash(password),
+                form.get("telegram_id") or None,
+                form.get("telegram_username") or None,
+                form.get("telegram_first_name") or None,
+                validate_role(form.get("role")),
+                validate_status(form.get("status")),
+            ),
+        )
+        return cursor.lastrowid
+
+
 def get_user(user_id):
     with db() as conn:
         ensure_telegram_link_schema(conn)
@@ -57,8 +101,16 @@ def get_user(user_id):
 
 
 def update_user(user_id, form):
+    email = (form.get("email") or "").strip().lower()
+    if not (form.get("name") or "").strip():
+        raise ValueError("Informe o nome do usuario.")
+    if not email:
+        raise ValueError("Informe o email do usuario.")
     with db() as conn:
         ensure_telegram_link_schema(conn)
+        duplicate = conn.execute("select id from users where lower(email) = lower(?) and id != ?", (email, user_id)).fetchone()
+        if duplicate:
+            raise ValueError("Ja existe outro usuario com esse email.")
         conn.execute(
             """
             update users
@@ -67,12 +119,12 @@ def update_user(user_id, form):
             """,
             (
                 form.get("name"),
-                form.get("email") or None,
+                email,
                 form.get("telegram_id") or None,
                 form.get("telegram_username") or None,
                 form.get("telegram_first_name") or None,
-                form.get("role"),
-                form.get("status"),
+                validate_role(form.get("role")),
+                validate_status(form.get("status")),
                 user_id,
             ),
         )

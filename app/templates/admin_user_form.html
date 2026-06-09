@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% set page_title = "Novo usuario" if mode == "create" else "Editar usuario" %}
+
+{% block content %}
+<form class="panel form-panel admin-edit-form" method="post">
+  <div class="panel-heading">
+    <h2>{{ "Criar usuario" if mode == "create" else user.name }}</h2>
+    <a href="{{ url_for('web.admin_users') }}">Voltar</a>
+  </div>
+
+  {% if error %}
+  <div class="form-feedback error">{{ error }}</div>
+  {% endif %}
+
+  <label>Nome <input name="name" value="{{ user.name if user else '' }}" required></label>
+  <label>Email <input type="email" name="email" value="{{ user.email if user else '' }}" required></label>
+  <label>Telegram ID <input name="telegram_id" value="{{ user.telegram_id if user and user.telegram_id else '' }}"></label>
+  <label>Telegram username <input name="telegram_username" value="{{ user.telegram_username if user and user.telegram_username else '' }}"></label>
+  <label>Telegram nome <input name="telegram_first_name" value="{{ user.telegram_first_name if user and user.telegram_first_name else '' }}"></label>
+  <label>Perfil
+    <select name="role">
+      <option value="user" {% if not user or user.role == 'user' %}selected{% endif %}>user</option>
+      <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>admin</option>
+    </select>
+  </label>
+  <label>Status
+    <select name="status">
+      <option value="ativo" {% if not user or user.status == 'ativo' %}selected{% endif %}>ativo</option>
+      <option value="inativo" {% if user and user.status == 'inativo' %}selected{% endif %}>inativo</option>
+    </select>
+  </label>
+  <label>{{ "Senha inicial" if mode == "create" else "Nova senha" }}
+    <input type="password" name="password" placeholder="{{ 'Obrigatoria para novo usuario' if mode == 'create' else 'Deixe vazio para manter' }}" {% if mode == "create" %}required{% endif %}>
+  </label>
+  <button class="primary-button">{{ "Criar usuario" if mode == "create" else "Salvar alteracoes" }}</button>
+</form>
+{% endblock %}
